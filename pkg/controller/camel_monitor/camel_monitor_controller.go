@@ -64,7 +64,7 @@ func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasG
 	}
 	if hasGrafanaCRDs {
 		log.Log.WithName("reconciler").Info("Detected the presence of GrafanaDashboard custom resource. If enabled, the operator" +
-			" will create Grafana dashboards resources automatically!")
+			" will create Grafana dashboards resources automatically! NOTE: this is an experimental feature.")
 	} else {
 		log.Log.WithName("reconciler").Info("No presence of GrafanaDashboard custom resource. The operator" +
 			" won't be able to create Grafana dashboards resources automatically!")
