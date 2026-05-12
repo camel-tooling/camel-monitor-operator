@@ -1,0 +1,6 @@
+repositoryID: 6d2ce330-2ff9-47e7-bd00-d0313c92c271
+owners: # (optional, used to claim repository ownership)
+  - name: gansheer
+    email: gaelle.fournier.work@gmail.com
+  - name: pcongiusti
+    email: pcongiusti@apache.org
