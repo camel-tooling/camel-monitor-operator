@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
@@ -100,6 +101,61 @@ func TestMonitorActionDeploymentScaledTo0(t *testing.T) {
 	assert.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
 	assert.Equal(t, "No active Pod available", healthy.Message)
+}
+
+func TestMonitorActionDeploymentWithStatusScaledTo0(t *testing.T) {
+	lastExchangeTime := time.Now()
+	app := &v1alpha1.CamelMonitor{}
+	app.Name = "test-app"
+	app.Namespace = "default"
+	app.Annotations = map[string]string{
+		v1alpha1.MonitorImportedKindLabel: "Deployment",
+		v1alpha1.MonitorImportedNameLabel: "my-test-deploy",
+	}
+	// NOTE: these information should still exists when the app is scaled to 0
+	app.Status = v1alpha1.CamelMonitorStatus{
+		Info: "existing info",
+		SuccessRate: &v1alpha1.SLIExchangeSuccessRate{
+			LastTimestamp: &metav1.Time{Time: lastExchangeTime},
+		},
+	}
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-test-deploy", Namespace: "default"},
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{Image: "my-camel-image"},
+				},
+			}},
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "my-camel-app"}},
+			Replicas: ptr.To(int32(0)),
+		},
+	}
+
+	fakeClient, err := internal.NewFakeClient(app, deployment)
+	require.NoError(t, err)
+
+	action := &monitorAction{}
+	action.InjectClient(fakeClient)
+
+	target, err := action.Handle(context.TODO(), app)
+
+	require.NoError(t, err)
+	require.NotNil(t, target)
+	assert.Equal(t, "my-camel-image", target.Status.Image)
+	assert.Equal(t, ptr.To(int32(0)), target.Status.Replicas)
+	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
+	monitored := target.Status.GetCondition("Monitored")
+	assert.NotNil(t, monitored)
+	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
+	assert.Equal(t, "No active Pod available", monitored.Message)
+	healthy := target.Status.GetCondition("Healthy")
+	assert.NotNil(t, healthy)
+	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
+	assert.Equal(t, "No active Pod available", healthy.Message)
+	assert.Equal(t, "existing info", target.Status.Info)
+	assert.Equal(t, lastExchangeTime, target.Status.SuccessRate.LastTimestamp.Time)
 }
 
 func TestMonitorActionDeploymentNonActivePods(t *testing.T) {

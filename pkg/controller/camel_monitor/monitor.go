@@ -73,7 +73,12 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 		return nil, err
 	}
 	targetApp := cmon.DeepCopy()
-	targetApp.Status = v1alpha1.CamelMonitorStatus{}
+	// Important: we keep any previous existing info, so that, in case of scaling to 0
+	// we maintain the latest scraped information available.
+	targetApp.Status = v1alpha1.CamelMonitorStatus{
+		Info:        cmon.Status.Info,
+		SuccessRate: cmon.Status.SuccessRate,
+	}
 	targetApp.ImportCamelAnnotations(nonManagedApp.GetAnnotations())
 
 	deployImage := nonManagedApp.GetAppImage()

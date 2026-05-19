@@ -95,7 +95,7 @@ func TestVerifyDeployment(t *testing.T) {
 				MatchFields(IgnoreExtras, Fields{
 					"Phase":       Equal(v1alpha1.CamelMonitorPhasePaused),
 					"Replicas":    PointTo(Equal(int32(0))),
-					"SuccessRate": BeNil(),
+					"SuccessRate": Not(BeNil()),
 				}),
 			)
 			// Delete deployment
