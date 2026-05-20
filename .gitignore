@@ -4,3 +4,4 @@ build/_output
 /camel-monitor
 Gemfile.lock
 /license-check
+/bundle

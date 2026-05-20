@@ -60,6 +60,9 @@ GIT_COMMIT := $(shell if [ -d .git ]; then git rev-list -1 HEAD; else echo "$(CU
 # Used to push pre-release artifacts
 STAGING_IMAGE := quay.io/camel-tooling/camel-monitor-operator
 
+# OLM configuration
+BUNDLE_METADATA_OPTS := --channels=default --default-channel=latest --package=camel-monitor-operator
+
 # Tests may run in parallel to each other. This count sets the amount of tests run in parallel.
 # (default value would be otherwise GOMAXPROCS)
 TEST_COMMON_PARALLEL_COUNT ?= 2
@@ -405,7 +408,21 @@ ifeq (, $(shell command -v kubectl 2> /dev/null))
 	$(error "No kubectl found in PATH. Please install and re-run")
 endif
 
-bundle: set-version kustomize
+bundle: set-version kustomize operator-sdk
+	@# Display BUNDLE_METADATA_OPTS for debugging
+	$(info BUNDLE_METADATA_OPTS=$(BUNDLE_METADATA_OPTS))
+	@# Sets the operator image to the preferred image:tag
+	@cd pkg/resources/config/manifests && $(KUSTOMIZE) edit set image $(IMAGE_NAME)=$(CUSTOM_IMAGE):$(CUSTOM_VERSION)
+	@# Build kustomize manifests
+	@$(KUSTOMIZE) build pkg/resources/config/manifests | \
+		$(OPERATOR_SDK) generate bundle \
+			-q --overwrite --version $(OPERATOR_VERSION) \
+			--kustomize-dir pkg/resources/config/manifests $(BUNDLE_METADATA_OPTS)
+	@# Move the dockerfile into the bundle directory
+	@mv bundle.Dockerfile bundle/Dockerfile && sed -i 's/bundle\///g' bundle/Dockerfile
+	@# Adds the licence headers to the csv file
+	./script/add_license.sh bundle/manifests ./script/headers/yaml.txt
+	$(OPERATOR_SDK) bundle validate ./bundle
 
 kustomize:
 	go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)

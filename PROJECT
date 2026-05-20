@@ -1,0 +1,11 @@
+domain: apache.org
+layout: go.kubebuilder.io/v2
+projectName: camel-monitor-operator
+repo: github.com/camel-tooling/camel-monitor-operator
+resources:
+- group: camel
+  kind: CamelMonitor
+  version: v1alpha1
+version: "3"
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
