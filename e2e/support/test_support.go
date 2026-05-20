@@ -349,3 +349,31 @@ func PortForwardPrometheus(t *testing.T, ctx context.Context, localPort, remoteP
 		}
 	}
 }
+
+func Make(t *testing.T, rule string, args ...string) *exec.Cmd {
+	return MakeWithContext(t, rule, args...)
+}
+
+func MakeWithContext(t *testing.T, rule string, args ...string) *exec.Cmd {
+	makeArgs := os.Getenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_ARGS")
+	defaultArgs := strings.Fields(makeArgs)
+	args = append(defaultArgs, args...)
+
+	defaultDir := "."
+	makeDir := os.Getenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR")
+	if makeDir == "" {
+		makeDir = defaultDir
+	} else if makeDir != defaultDir {
+		fmt.Printf("Using alternative make directory on path: %s\n", makeDir)
+	}
+
+	if fi, e := os.Stat(makeDir); e != nil && os.IsNotExist(e) {
+		failTest(t, e)
+	} else if !fi.Mode().IsDir() {
+		failTest(t, e)
+	}
+
+	args = append([]string{"-C", makeDir, rule}, args...)
+	fmt.Println("Running make with arguments:", args)
+	return exec.Command("make", args...)
+}

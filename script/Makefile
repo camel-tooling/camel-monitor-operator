@@ -62,6 +62,7 @@ STAGING_IMAGE := quay.io/camel-tooling/camel-monitor-operator
 
 # OLM configuration
 BUNDLE_METADATA_OPTS := --channels=default --default-channel=latest --package=camel-monitor-operator
+BUNDLE_IMAGE_NAME ?= $(CUSTOM_IMAGE)-bundle
 
 # Tests may run in parallel to each other. This count sets the amount of tests run in parallel.
 # (default value would be otherwise GOMAXPROCS)
@@ -199,6 +200,11 @@ test-knative:
 test-prometheus:
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/prometheus/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
+test-install-olm:
+	FAILED=0; \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 20m -v ./e2e/install/olm -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
 build-camel-monitor:
@@ -423,6 +429,20 @@ bundle: set-version kustomize operator-sdk
 	@# Adds the licence headers to the csv file
 	./script/add_license.sh bundle/manifests ./script/headers/yaml.txt
 	$(OPERATOR_SDK) bundle validate ./bundle
+
+# Build the bundle image.
+bundle-build: bundle
+	cd bundle && docker build -f Dockerfile -t $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION) .
+
+bundle-push: bundle-build
+	docker push $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION)
+
+bundle-test: operator-sdk
+ifndef NAMESPACE
+	@echo "WARN: no namespace specified, using default namespace $(DEFAULT_NS)"
+	$(eval NAMESPACE=$(DEFAULT_NS))
+endif
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION) -n $(NAMESPACE)
 
 kustomize:
 	go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)
