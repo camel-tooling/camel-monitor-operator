@@ -29,3 +29,19 @@ Notes to be further developed:
 * Push the release branch
 * Create a tag with the version you want to cut as `vx.y.z` (ie, `v0.0.1`) --> will trigger a Github action pushing the operator container image to Quay.io (repo https://quay.io/repository/camel-tooling/camel-monitor-operator?tab=tags)
 * Finalize the release
+
+=== Operator Hub
+
+The https://github.com/k8s-operatorhub/community-operators/[OperatorHub] downstream channel should be synced to publish the latest version
+of Camel Monitor Operator, so that it can be easily installed on platforms that support Operator Hub.
+
+The https://github.com/redhat-openshift-ecosystem/community-operators-prod/[Embedded OperatorHub in OpenShift and OKD] downstream channel should be synced to publish the latest version of Camel Monitor Operator, so that it can be easily installed on OpenShift and OKD.
+
+You can create the bundle and prepare the supported OLM environments:
+
+```
+VERSION=<version> make bundle
+./script/prepare-operators.sh <version> <github-userid>
+```
+
+The script is in charge to clone a fork you had to do have available on with your Github user and issue a PR with the required changes.

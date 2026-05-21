@@ -64,6 +64,19 @@ STAGING_IMAGE := quay.io/camel-tooling/camel-monitor-operator
 BUNDLE_METADATA_OPTS := --channels=default --default-channel=latest --package=camel-monitor-operator
 BUNDLE_IMAGE_NAME ?= $(CUSTOM_IMAGE)-bundle
 
+# OLM CSV configuration
+MANIFESTS := pkg/resources/config/manifests
+DEFAULT_CHANNEL ?= $(shell echo "stable-v$(word 1,$(subst ., ,$(lastword $(OPERATOR_VERSION))))")
+CHANNELS ?= $(DEFAULT_CHANNEL),latest
+PACKAGE := camel-monitor-operator
+CSV_VERSION := $(OPERATOR_VERSION)
+CSV_NAME := $(PACKAGE).v$(CSV_VERSION)
+CSV_DISPLAY_NAME := Camel Monitor Operator
+CSV_SUPPORT := Camel
+CSV_REPLACES := $(LAST_RELEASED_IMAGE_NAME).v$(LAST_RELEASED_VERSION)
+CSV_FILENAME := $(PACKAGE).clusterserviceversion.yaml
+CSV_PATH := $(MANIFESTS)/bases/$(CSV_FILENAME)
+
 # Tests may run in parallel to each other. This count sets the amount of tests run in parallel.
 # (default value would be otherwise GOMAXPROCS)
 TEST_COMMON_PARALLEL_COUNT ?= 2
@@ -414,7 +427,21 @@ ifeq (, $(shell command -v kubectl 2> /dev/null))
 	$(error "No kubectl found in PATH. Please install and re-run")
 endif
 
-bundle: set-version kustomize operator-sdk
+pre-bundle:
+# bundle name must match that which appears in PROJECT file
+	@sed -i 's/projectName: .*/projectName: $(PACKAGE)/' PROJECT
+	@sed -i 's~^    containerImage: .*~    containerImage: $(CUSTOM_IMAGE):$(CUSTOM_VERSION)~' $(CSV_PATH)
+	@sed -i 's/^    support: .*/    support: $(CSV_SUPPORT)/' $(CSV_PATH)
+	@sed -i 's/^  name: .*.\(v.*\)/  name: $(CSV_NAME)/' $(CSV_PATH)
+	@sed -i 's/^  displayName: .*/  displayName: $(CSV_DISPLAY_NAME)/' $(CSV_PATH)
+	@sed -i 's/^  version: .*/  version: $(CSV_VERSION)/' $(CSV_PATH)
+	@sed -i 's/^  minKubeVersion: .*/  minKubeVersion: $(MIN_KUBE_VERSION)/' $(CSV_PATH)
+	@if grep -q replaces $(CSV_PATH); \
+		then sed -i 's/^  replaces: .*/  replaces: $(CSV_REPLACES)/' $(CSV_PATH); \
+		else sed -i '/  version: ${CSV_VERSION}/a \ \ replaces: $(CSV_REPLACES)' $(CSV_PATH); \
+	fi
+
+bundle: set-version kustomize operator-sdk pre-bundle
 	@# Display BUNDLE_METADATA_OPTS for debugging
 	$(info BUNDLE_METADATA_OPTS=$(BUNDLE_METADATA_OPTS))
 	@# Sets the operator image to the preferred image:tag
