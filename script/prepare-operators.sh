@@ -47,16 +47,16 @@ cp ./tests/scorecard/config.yaml openshift-ecosystem/$1/tests/scorecard/config.y
 
 # Clone projects
 git clone https://github.com/$gh_user/community-operators.git /tmp/operators/community-operators
-mkdir -p /tmp/operators/community-operators/operators/camel-monitor
-cp -r k8s-operatorhub/$version /tmp/operators/community-operators/operators/camel-monitor/.
+mkdir -p /tmp/operators/community-operators/operators/camel-monitor-operator
+cp -r k8s-operatorhub/$version /tmp/operators/community-operators/operators/camel-monitor-operator/.
 git clone https://github.com/$gh_user/community-operators-prod.git /tmp/operators/community-operators-prod
-mkdir -p /tmp/operators/community-operators-prod/operators/camel-monitor
-cp -r openshift-ecosystem/$version /tmp/operators/community-operators-prod/operators/camel-monitor/.
+mkdir -p /tmp/operators/community-operators-prod/operators/camel-monitor-operator
+cp -r openshift-ecosystem/$version /tmp/operators/community-operators-prod/operators/camel-monitor-operator/.
 
 # Community operators
 cd /tmp/operators/community-operators
 git checkout -b feat/v$version
-git add operators/camel-monitor/$version
+git add operators/camel-monitor-operator/$version
 git commit -s -m "operator camel-monitor ($version)"
 git remote add upstream https://github.com/k8s-operatorhub/community-operators -f
 git pull --rebase upstream main
@@ -65,7 +65,7 @@ git push --set-upstream origin feat/v$version
 # Community operators PROD
 cd /tmp/operators/community-operators-prod
 git checkout -b feat/v$version
-git add operators/camel-monitor/$version
+git add operators/camel-monitor-operator/$version
 git commit -s -m "operator camel-monitor ($version)"
 git remote add upstream https://github.com/redhat-openshift-ecosystem/community-operators-prod -f
 git pull --rebase upstream main
