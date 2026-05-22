@@ -61,10 +61,6 @@ GIT_COMMIT := $(shell if [ -d .git ]; then git rev-list -1 HEAD; else echo "$(CU
 STAGING_IMAGE := quay.io/camel-tooling/camel-monitor-operator
 
 # OLM configuration
-BUNDLE_METADATA_OPTS := --channels=default --default-channel=latest --package=camel-monitor-operator
-BUNDLE_IMAGE_NAME ?= $(CUSTOM_IMAGE)-bundle
-
-# OLM CSV configuration
 MANIFESTS := pkg/resources/config/manifests
 DEFAULT_CHANNEL ?= $(shell echo "stable-v$(word 1,$(subst ., ,$(lastword $(OPERATOR_VERSION))))")
 CHANNELS ?= $(DEFAULT_CHANNEL),latest
@@ -76,20 +72,13 @@ CSV_SUPPORT := Camel
 CSV_REPLACES := $(LAST_RELEASED_IMAGE_NAME).v$(LAST_RELEASED_VERSION)
 CSV_FILENAME := $(PACKAGE).clusterserviceversion.yaml
 CSV_PATH := $(MANIFESTS)/bases/$(CSV_FILENAME)
+BUNDLE_METADATA_OPTS := --channels=$(CHANNELS) --default-channel=$(DEFAULT_CHANNEL) --package=$(PACKAGE)
+BUNDLE_IMAGE_NAME ?= $(CUSTOM_IMAGE)-bundle
 
 # Tests may run in parallel to each other. This count sets the amount of tests run in parallel.
 # (default value would be otherwise GOMAXPROCS)
 TEST_COMMON_PARALLEL_COUNT ?= 2
 TEST_ADVANCED_PARALLEL_COUNT ?= 2
-
-# OLM (Operator Lifecycle Manager and Operator Hub): uncomment to override operator settings at build time
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultOperatorName=camel-monitor-operator
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultPackage=camel-dashboard
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultChannel=alpha
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultSource=community-operators
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultSourceNamespace=openshift-marketplace
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultStartingCSV=
-#GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/olm.DefaultGlobalNamespace=openshift-operators
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
