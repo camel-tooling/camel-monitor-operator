@@ -24,7 +24,7 @@ PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 LOCALBIN := $(PROJECT_PATH)/bin
 
 VERSIONFILE := pkg/util/defaults/defaults.go
-VERSION ?= 0.2.0-SNAPSHOT
+VERSION ?= 0.2.0
 LAST_RELEASED_IMAGE_NAME := camel-monitor-operator
 LAST_RELEASED_VERSION ?= 0.0.1
 # Kubernetes tooling

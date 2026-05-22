@@ -33,4 +33,4 @@ resources:
 images:
 - name: quay.io/camel-tooling/camel-monitor-operator
   newName: quay.io/camel-tooling/camel-monitor-operator
-  newTag: 0.3.0-SNAPSHOT
+  newTag: 0.2.0
