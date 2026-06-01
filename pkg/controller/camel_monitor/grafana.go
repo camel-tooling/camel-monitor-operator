@@ -59,7 +59,7 @@ func addGrafanaDashboard(ctx context.Context, c client.Client, target *v1alpha1.
 		dashboard := &integreatlyv1beta1.GrafanaDashboard{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "GrafanaDashboard",
-				APIVersion: integreatlyv1beta1.GroupVersion.String(),
+				APIVersion: integreatlyv1beta1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            target.GetName(),

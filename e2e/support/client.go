@@ -81,7 +81,7 @@ func NewClientWithConfig(cfg *rest.Config) (client.Client, error) {
 			return nil, err
 		}
 	}
-	if !clientScheme.IsVersionRegistered(integreatlyv1beta1.GroupVersion) {
+	if !clientScheme.IsVersionRegistered(integreatlyv1beta1.SchemeGroupVersion) {
 		// Setup Scheme for Grafana CRs
 		err = integreatlyv1beta1.AddToScheme(clientScheme)
 		if err != nil {
