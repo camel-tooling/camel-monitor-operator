@@ -209,6 +209,11 @@ test-install-olm:
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 20m -v ./e2e/install/olm -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
+test-install-namespaced:
+	FAILED=0; \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/namespaced/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
 build-camel-monitor:
 	@echo "####### Building camel-monitor CLI for linux/$(IMAGE_ARCH) architecture..."
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(IMAGE_ARCH) go build $(GOFLAGS) -o build/_output/bin/camel-monitor-$(IMAGE_ARCH) ./cmd/camel-monitor/*.go
