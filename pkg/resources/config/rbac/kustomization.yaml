@@ -15,23 +15,12 @@
 # limitations under the License.
 # ---------------------------------------------------------------------------
 
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: camel-monitor-operator-leases
-  labels:
-    app: "camel-monitor"
-rules:
-- apiGroups:
-  - "coordination.k8s.io"
-  resources:
-  - leases
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
+#
+# rbac resources applicable for all kubernetes platforms
+#
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- operator-role-leases.yaml
+- operator-role-binding-leases.yaml
