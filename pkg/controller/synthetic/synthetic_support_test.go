@@ -475,3 +475,13 @@ process_cpu_usage 0.1
 	assert.Equal(t, "100", *podInfo.ProcessCPUUsed)
 	assert.True(t, podInfo.HasCPUPressure)
 }
+
+func TestCPUPressureNoMax(t *testing.T) {
+	podInfo := &v1alpha1.PodInfo{
+		ObservabilityService: &v1alpha1.ObservabilityServiceInfo{},
+	}
+	// empty value
+	err := setCPUPressure(podInfo, ptr.To(""))
+	require.NoError(t, err)
+	assert.False(t, podInfo.HasCPUPressure)
+}
