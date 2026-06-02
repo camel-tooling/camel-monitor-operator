@@ -28,6 +28,7 @@ resources:
 - ../crd
 - ../samples
 - ../scorecard
+- ../rbac
 - ../rbac/namespaced
 
 images:
