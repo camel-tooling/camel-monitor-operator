@@ -101,7 +101,7 @@ func inspectPod(httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodIn
 }
 
 func setCPUPressure(podInfo *v1alpha1.PodInfo, cpuLimit *string) error {
-	if cpuLimit != nil {
+	if cpuLimit != nil && *cpuLimit != "" {
 		podInfo.ProcessCPUMax = cpuLimit
 		// At this stage we should have already the cpu usage metric collected (if it exists)
 		// therefore we can calculate the cpu pressure flag
