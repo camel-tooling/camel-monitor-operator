@@ -62,14 +62,14 @@ func TestOLMInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns, " ")...,
+					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
 				),
 			)
 			// Add the labels to discover it
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample-monitored -n "+ns, " ")...,
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-monitored -n "+ns, " ")...,
 				),
 			)
 			// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
@@ -88,7 +88,7 @@ func TestOLMInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("delete deployment camel-app-main -n "+ns, " ")...,
+					strings.Split("delete deployment camel-app -n "+ns, " ")...,
 				),
 			)
 			// No CamelMonitors around (garbage collected)
@@ -103,14 +103,14 @@ func TestOLMInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns2, " ")...,
+					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
 				),
 			)
 			// Add the labels to discover it
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
 				),
 			)
 			// No CamelMonitors in this namespace

@@ -55,14 +55,14 @@ func TestNamespacedInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns, " ")...,
+					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
 				),
 			)
 			// Add the labels to discover it
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
 				),
 			)
 			// The name of the selector, "camel.apache.org/monitor: camel-sample"
@@ -81,7 +81,7 @@ func TestNamespacedInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("delete deployment camel-app-main -n "+ns, " ")...,
+					strings.Split("delete deployment camel-app -n "+ns, " ")...,
 				),
 			)
 			// No CamelMonitors around (garbage collected)
@@ -96,14 +96,14 @@ func TestNamespacedInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns, " ")...,
+					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
 				),
 			)
 			// Add the labels to discover it
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
 				),
 			)
 			// No CamelMonitors in this namespace

@@ -384,6 +384,18 @@ func CamelAppMain() string {
 	return "docker.io/squakez/db-app-main:" + camelAppVersion
 }
 
+func CamelAppQuarkus() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-app-quarkus:" + camelAppVersion
+}
+
+func CamelAppSpringBoot() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-app-sb:" + camelAppVersion
+}
+
 func getCamelAppVersion() string {
 	camelAppVersion := os.Getenv("CAMEL_APP_VERSION")
 	if camelAppVersion == "" {
