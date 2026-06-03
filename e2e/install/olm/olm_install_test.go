@@ -69,7 +69,7 @@ func TestOLMInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
+					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample-monitored -n "+ns, " ")...,
 				),
 			)
 			// The name of the selector, "camel.apache.org/monitor: camel-sample"
@@ -97,24 +97,24 @@ func TestOLMInstallation(t *testing.T) {
 	})
 
 	// Verify the app running in another namespace is not monitored
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
+	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
 		// Verify an app running in the same namespace
 		t.Run("simple Deployment (non monitored)", func(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image=docker.io/squakez/db-app-main:1.0 -n "+ns, " ")...,
+					strings.Split("create deployment camel-app-main --image=docker.io/squakez/db-app-main:1.0 -n "+ns2, " ")...,
 				),
 			)
 			// Add the labels to discover it
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
+					strings.Split("label deployment camel-app-main camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
 				),
 			)
 			// No CamelMonitors in this namespace
-			g.Consistently(CamelMonitors(t, ctx, ns), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
+			g.Consistently(CamelMonitors(t, ctx, ns2), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
 		})
 	})
 

@@ -463,7 +463,7 @@ ifndef NAMESPACE
 	@echo "WARN: no namespace specified, using default namespace $(DEFAULT_NS)"
 	$(eval NAMESPACE=$(DEFAULT_NS))
 endif
-	$(OPERATOR_SDK) run bundle $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION) -n $(NAMESPACE)
+	$(OPERATOR_SDK) run bundle $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION) --install-mode OwnNamespace -n $(NAMESPACE)
 
 kustomize:
 	go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)
