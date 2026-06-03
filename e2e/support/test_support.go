@@ -377,3 +377,18 @@ func MakeWithContext(t *testing.T, rule string, args ...string) *exec.Cmd {
 	fmt.Println("Running make with arguments:", args)
 	return exec.Command("make", args...)
 }
+
+func CamelAppMain() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-app-main:" + camelAppVersion
+}
+
+func getCamelAppVersion() string {
+	camelAppVersion := os.Getenv("CAMEL_APP_VERSION")
+	if camelAppVersion == "" {
+		camelAppVersion = "4.20.0"
+	}
+
+	return camelAppVersion
+}

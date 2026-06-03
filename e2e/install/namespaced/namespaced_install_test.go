@@ -55,7 +55,7 @@ func TestNamespacedInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image=docker.io/squakez/db-app-main:1.0 -n "+ns, " ")...,
+					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns, " ")...,
 				),
 			)
 			// Add the labels to discover it
@@ -96,7 +96,7 @@ func TestNamespacedInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("create deployment camel-app-main --image=docker.io/squakez/db-app-main:1.0 -n "+ns, " ")...,
+					strings.Split("create deployment camel-app-main --image="+CamelAppMain()+" -n "+ns, " ")...,
 				),
 			)
 			// Add the labels to discover it
