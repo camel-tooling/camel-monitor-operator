@@ -529,7 +529,7 @@ goimport:
 #####
 
 KUSTOMIZE_DIR = "install/overlays/kubernetes/descoped"
-DEFAULT_NS = "camel-monitor"
+DEFAULT_NS = "camel"
 
 .PHONY: install install-k8s-global install-k8s-ns install-openshift-global install-openshift-ns
 
@@ -568,7 +568,7 @@ endif
 	cd $(KUST_TMP)/$(KUSTOMIZE_DIR) && kustomize edit set namespace $(NAMESPACE)
 	kubectl apply -k $(KUST_TMP)/$(KUSTOMIZE_DIR) --server-side --force-conflicts
 
-install-k8s-global: DEFAULT_NS="camel-monitor"
+install-k8s-global: DEFAULT_NS="camel"
 install-k8s-global: KUSTOMIZE_DIR="install/overlays/kubernetes/descoped"
 install-k8s-global: clone-kustomize-dir set-operator-id set-operator-env install-operator
 

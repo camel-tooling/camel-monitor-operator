@@ -73,9 +73,9 @@ jobs:
     - name: Install Camel Monitor operator
       shell: bash
       run: |
-        kubectl create ns camel-monitor
+        kubectl create ns camel
         make install-k8s-global
-        kubectl wait --for=condition=available deployment/camel-monitor-operator --timeout=180s -n camel-monitor
+        kubectl wait --for=condition=available deployment/camel-monitor-operator --timeout=180s -n camel
 
     # Very useful to create testing application on the fly
     - name: Install Camel K operator

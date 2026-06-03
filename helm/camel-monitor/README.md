@@ -12,7 +12,7 @@ helm repo add camel-dashboard https://camel-tooling.github.io/camel-dashboard/ch
 
 Install chart
 ```
-$ helm install camel-monitor-operator camel-dashboard/camel-monitor-operator -n camel-monitor
+$ helm install camel-monitor-operator camel-dashboard/camel-monitor-operator -n camel
 ```
 
 For more installation configuration on the Camel Monitor Operator please see the [installation documentation](https://camel-tooling.github.io/camel-dashboard/docs/installation-guide/operator/).
