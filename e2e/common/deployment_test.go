@@ -38,6 +38,14 @@ func TestVerifyDeploymentQuarkus(t *testing.T) {
 	testVerifyDeployment(t, CamelAppQuarkus())
 }
 
+func TestVerifyDeploymentSpringBoot(t *testing.T) {
+	testVerifyDeployment(t, CamelAppSpringBoot())
+}
+
+func TestVerifyDeploymentMain(t *testing.T) {
+	testVerifyDeployment(t, CamelAppMain())
+}
+
 func TestVerifyDeploymentLabelInLabelOut(t *testing.T) {
 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
 		t.Run("simple Deployment", func(t *testing.T) {
