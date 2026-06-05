@@ -156,14 +156,14 @@ func TestOLMGlobalInstallation(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-monitored -n "+ns2, " ")...,
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-global-monitored -n "+ns2, " ")...,
 				),
 			)
 			// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-			g.Eventually(CamelMonitor(t, ctx, ns2, "camel-sample-monitored")).Should(Not(BeNil()))
+			g.Eventually(CamelMonitor(t, ctx, ns2, "camel-global-monitored")).Should(Not(BeNil()))
 			g.Eventually(
-				CamelMonitorStatus(t, ctx, ns2, "camel-sample-monitored"),
-				TestTimeoutLong,
+				CamelMonitorStatus(t, ctx, ns2, "camel-global-monitored"),
+				TestTimeoutMedium,
 			).Should(
 				MatchFields(IgnoreExtras, Fields{
 					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
