@@ -22,9 +22,9 @@ package defaults
 // ***********************
 
 const (
-	// Version --
+	// Version -- .
 	Version = "0.3.0-SNAPSHOT"
 )
 
-// GitCommit must be provided during application build
+// GitCommit must be provided during application build.
 var GitCommit string

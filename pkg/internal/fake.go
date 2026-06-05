@@ -53,22 +53,33 @@ func (c *TestClient) Status() ctrl.SubResourceWriter {
 // you need to provide CRD objects (camelObjs) separately from core objects.
 func NewFakeClient(objs ...ctrl.Object) (client.Client, error) {
 	scheme := runtime.NewScheme()
-	if err := corev1.AddToScheme(scheme); err != nil {
+	err := corev1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
-	if err := appsv1.AddToScheme(scheme); err != nil {
+
+	err = appsv1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
-	if err := batchv1.AddToScheme(scheme); err != nil {
+
+	err = batchv1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
-	if err := camelv1alpha1.AddToScheme(scheme); err != nil {
+
+	err = camelv1alpha1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
-	if err := monitoringv1.AddToScheme(scheme); err != nil {
+
+	err = monitoringv1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
-	if err := integreatlyv1beta1.AddToScheme(scheme); err != nil {
+
+	err = integreatlyv1beta1.AddToScheme(scheme)
+	if err != nil {
 		return nil, err
 	}
 	// NOTE: register any more type required by the unit tests

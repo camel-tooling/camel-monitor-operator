@@ -32,7 +32,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,10 +51,12 @@ func addGrafanaDashboard(ctx context.Context, c client.Client, target *v1alpha1.
 	// Verify the existence of the Prometheus metrics endpoint
 	if target.Status.DoesExposeMetrics() {
 		references := target.GetOwnerReferences()
+
 		dashboardJson, err := buildGrafanaDashboardJSON(target, limits)
 		if err != nil {
 			return err
 		}
+
 		dashboard := &integreatlyv1beta1.GrafanaDashboard{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "GrafanaDashboard",
@@ -89,6 +90,7 @@ func addGrafanaDashboard(ctx context.Context, c client.Client, target *v1alpha1.
 
 func replaceGrafanaDashboard(ctx context.Context, c client.Client, dashboard *integreatlyv1beta1.GrafanaDashboard) error {
 	existing := &integreatlyv1beta1.GrafanaDashboard{}
+
 	err := c.Get(ctx, ctrl.ObjectKey{
 		Name:      dashboard.Name,
 		Namespace: dashboard.Namespace,
@@ -97,8 +99,10 @@ func replaceGrafanaDashboard(ctx context.Context, c client.Client, dashboard *in
 		if k8serrors.IsNotFound(err) {
 			return c.Create(ctx, dashboard)
 		}
+
 		return err
 	}
+
 	dashboard.ResourceVersion = existing.ResourceVersion
 
 	return c.Update(ctx, dashboard)
@@ -107,10 +111,12 @@ func replaceGrafanaDashboard(ctx context.Context, c client.Client, dashboard *in
 func addCamelMonitorGrafanaCondition(target *v1alpha1.CamelMonitor, err error) {
 	statusCond := metav1.ConditionTrue
 	message := "Created a GrafanaDashboard with the same name of this CamelMonitor"
+
 	if err != nil {
 		statusCond = metav1.ConditionFalse
 		message = "Some error happened while creating GrafanaDashboard: " + err.Error()
 	}
+
 	target.Status.AddCondition(metav1.Condition{
 		Type:               "GrafanaDashboard",
 		Status:             statusCond,
@@ -150,6 +156,7 @@ func buildGrafanaDashboardJSON(target *v1alpha1.CamelMonitor, limits corev1.Reso
 
 func getTimeSeriesPanel(metric, jobNamespace, jobName, eventType, sample string, pos v1alpha1.GridPos) v1alpha1.Panel {
 	panelTitle, panelExpressions := getRateExpressions(metric, jobNamespace, jobName, eventType, sample)
+
 	panel := v1alpha1.Panel{
 		Datasource: platform.GetGrafanaDatasource(),
 		Type:       "timeseries",
@@ -206,6 +213,7 @@ func getFieldConfigWithThresholds(maxValue float64, unit, thresholdStyleMode str
 	// TODO: we could make these as parameters
 	warnThreshold := maxValue * .8
 	errThreshold := maxValue * .9
+
 	fc := v1alpha1.FieldConfig{
 		Defaults: v1alpha1.FieldDefaults{
 			Unit: unit,
@@ -215,8 +223,8 @@ func getFieldConfigWithThresholds(maxValue float64, unit, thresholdStyleMode str
 				Mode: "absolute",
 				Steps: []v1alpha1.ThresholdStep{
 					{Color: "green", Value: nil},
-					{Color: "yellow", Value: ptr.To(warnThreshold)},
-					{Color: "red", Value: ptr.To(errThreshold)},
+					{Color: "yellow", Value: new(warnThreshold)},
+					{Color: "red", Value: new(errThreshold)},
 				},
 			},
 		},
@@ -256,9 +264,9 @@ func getJVMMemoryUsagePanel(jobNamespace, jobName string, maxValue float64, pos 
 // getRateExpressions return an array of expressions with the format expected for a rate count grouped and by pod.
 func getRateExpressions(metric, jobNamespace, jobName, eventType, sample string) (string, []string) {
 	metricTitle := strings.ReplaceAll(metric, "_", " ") + " per second"
+
 	return metricTitle, []string{
 		fmt.Sprintf("sum(rate(%s{job=\"%s/%s\", eventType=\"%s\"}[%s]))", metric, jobNamespace, jobName, eventType, sample),
 		fmt.Sprintf("sum(rate(%s{job=\"%s/%s\", eventType=\"%s\"}[%s])) by (pod)", metric, jobNamespace, jobName, eventType, sample),
 	}
-
 }

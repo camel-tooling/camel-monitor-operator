@@ -38,13 +38,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, `Use "json-schema-gen <crd> <schema> <path> <isArray> <destination>`)
 		os.Exit(1)
 	}
+
 	crd := os.Args[1]
 	schema := os.Args[2]
 	path := os.Args[3]
 	isArray := os.Args[4] == "true"
 	destination := filepath.Clean(os.Args[5])
 
-	if err := generate(crd, schema, path, isArray, destination); err != nil {
+	err := generate(crd, schema, path, isArray, destination)
+	if err != nil {
 		panic(err)
 	}
 }
@@ -54,9 +56,10 @@ func generate(crdFilename, dslFilename, path string, isArray bool, destination s
 	if err != nil {
 		return err
 	}
+
 	if !isArray && dslSchema["type"] == "array" {
 		//nolint:forcetypeassert
-		dslSchema = dslSchema["items"].(map[string]interface{})
+		dslSchema = dslSchema["items"].(map[string]any)
 	}
 
 	rebaseRefs(dslSchema)
@@ -65,7 +68,9 @@ func generate(crdFilename, dslFilename, path string, isArray bool, destination s
 	if err != nil {
 		return err
 	}
+
 	schema := apiextensionsv1.JSONSchemaProps{}
+
 	err = json.Unmarshal(bytes, &schema)
 	if err != nil {
 		return err
@@ -79,6 +84,7 @@ func generate(crdFilename, dslFilename, path string, isArray bool, destination s
 	if len(crdSchema.Definitions) > 0 {
 		panic("unexpected definitions found in CRD")
 	}
+
 	if isArray {
 		crdSchema.Definitions = schema.Items.Schema.Definitions
 		schema.Items.Schema.Definitions = apiextensionsv1.JSONSchemaDefinitions{}
@@ -89,16 +95,19 @@ func generate(crdFilename, dslFilename, path string, isArray bool, destination s
 
 	// merge DSL schema into the CRD schema
 	ref := *crdSchema
+
 	paths := pathComponents(path)
 	for _, p := range paths[:len(paths)-1] {
 		ref = ref.Properties[p]
 	}
+
 	ref.Properties[paths[len(paths)-1]] = schema
 
 	result, err := json.MarshalIndent(crdSchema, "", "  ")
 	if err != nil {
 		return err
 	}
+
 	return os.WriteFile(destination, result, io.FilePerm600)
 }
 
@@ -106,20 +115,20 @@ func remapRef(ref string) string {
 	return "#" + strings.TrimPrefix(ref, "#/items")
 }
 
-func rebaseRefs(schema map[string]interface{}) {
+func rebaseRefs(schema map[string]any) {
 	for k, v := range schema {
 		switch {
 		case k == "$ref" && reflect.TypeOf(v).Kind() == reflect.String:
 			schema[k] = remapRef(fmt.Sprintf("%v", v))
 		case reflect.TypeOf(v).Kind() == reflect.Map:
-			if m, ok := v.(map[string]interface{}); ok {
+			if m, ok := v.(map[string]any); ok {
 				rebaseRefs(m)
 			}
 		case reflect.TypeOf(v).Kind() == reflect.Slice:
-			if vs, ok := v.([]interface{}); ok {
+			if vs, ok := v.([]any); ok {
 				for _, vv := range vs {
 					if reflect.TypeOf(vv).Kind() == reflect.Map {
-						if m, ok := vv.(map[string]interface{}); ok {
+						if m, ok := vv.(map[string]any); ok {
 							rebaseRefs(m)
 						}
 					}
@@ -129,15 +138,17 @@ func rebaseRefs(schema map[string]interface{}) {
 	}
 }
 
-func loadDslSchema(filename string) (map[string]interface{}, error) {
+func loadDslSchema(filename string) (map[string]any, error) {
 	bytes, err := os.ReadFile(filepath.Clean(filename))
 	if err != nil {
 		return nil, err
 	}
-	var dslSchema map[string]interface{}
+
+	var dslSchema map[string]any
 	if err := json.Unmarshal(bytes, &dslSchema); err != nil {
 		return nil, err
 	}
+
 	return dslSchema, nil
 }
 
@@ -146,15 +157,19 @@ func loadCrdSchema(filename string) (*apiextensionsv1.JSONSchemaProps, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	scheme := clientscheme.Scheme
+
 	err = apiextensionsv1.AddToScheme(scheme)
 	if err != nil {
 		return nil, err
 	}
+
 	obj, err := kubernetes.LoadResourceFromYaml(scheme, string(bytes))
 	if err != nil {
 		return nil, err
 	}
+
 	crd, ok := obj.(*apiextensionsv1.CustomResourceDefinition)
 	if !ok {
 		return nil, fmt.Errorf("type assertion failed: %v", obj)
@@ -165,11 +180,14 @@ func loadCrdSchema(filename string) (*apiextensionsv1.JSONSchemaProps, error) {
 
 func pathComponents(path string) []string {
 	res := make([]string, 0)
-	for _, p := range strings.Split(path, ".") {
+
+	for p := range strings.SplitSeq(path, ".") {
 		if len(strings.TrimSpace(p)) == 0 {
 			continue
 		}
+
 		res = append(res, p)
 	}
+
 	return res
 }

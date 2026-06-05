@@ -31,9 +31,11 @@ var addToManager []func(context.Context, ctrl.Manager, client.Client) error
 // AddToManager adds all Controllers to the Manager.
 func AddToManager(ctx context.Context, manager ctrl.Manager, client client.Client) error {
 	for _, f := range addToManager {
-		if err := f(ctx, manager, client); err != nil {
+		err := f(ctx, manager, client)
+		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }

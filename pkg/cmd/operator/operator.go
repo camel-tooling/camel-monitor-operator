@@ -80,6 +80,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 
 	// The constants specified here are zap specific
 	var logLevel zapcore.Level
+
 	logLevelVal, ok := os.LookupEnv("LOG_LEVEL")
 	if ok {
 		switch strings.ToLower(logLevelVal) {
@@ -110,7 +111,8 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	klog.SetLogger(log.AsLogger())
 
 	log.Infof("Starting the operator with leaderElection parameters %t: %s", leaderElection, leaderElectionID)
-	_, err := maxprocs.Set(maxprocs.Logger(func(f string, a ...interface{}) { log.Info(fmt.Sprintf(f, a)) }))
+
+	_, err := maxprocs.Set(maxprocs.Logger(func(f string, a ...any) { log.Info(fmt.Sprintf(f, a)) }))
 	if err != nil {
 		log.Error(err, "failed to set GOMAXPROCS from cgroups")
 	}
@@ -133,6 +135,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 		operatorNamespace = watchNamespace
 		if operatorNamespace == "" {
 			leaderElection = false
+
 			log.Info("unable to determine namespace for leader election")
 		}
 	}
@@ -142,6 +145,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	}
 
 	labelsSelector := getLabelSelector()
+
 	selector := cache.ByObject{
 		Label: labelsSelector,
 	}
@@ -151,6 +155,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 			Namespaces: getNamespacesSelector(operatorNamespace, watchNamespace),
 		}
 	}
+
 	selectors := map[ctrl.Object]cache.ByObject{
 		&appsv1.Deployment{}: selector,
 		&batchv1.CronJob{}:   selector,
@@ -191,11 +196,14 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 func getLabelSelector() labels.Selector {
 	labelSelector := platform.GetMonitorLabelSelector()
 	log.Infof("Using (%s) label selector to identify Camel applications on the cluster.", labelSelector)
+
 	if labelSelector == v1alpha1.MonitorLabel {
 		log.Infof("NOTE: You can change this setting by adding a variable named %s", platform.CamelMonitorLabelSelector)
 	}
+
 	hasAppLabel, err := labels.NewRequirement(labelSelector, selection.Exists, []string{})
 	exitOnError(err, "cannot create App label selector")
+
 	labelsSelector := labels.NewSelector().Add(*hasAppLabel)
 
 	return labelsSelector
@@ -208,6 +216,7 @@ func getNamespacesSelector(operatorNamespace string, watchNamespace string) map[
 	if operatorNamespace != watchNamespace {
 		namespacesSelector[watchNamespace] = cache.Config{}
 	}
+
 	return namespacesSelector
 }
 
@@ -217,6 +226,7 @@ func getWatchNamespace() (string, error) {
 	if !found {
 		return "", fmt.Errorf("%s must be set", platform.OperatorWatchNamespaceEnvVariable)
 	}
+
 	return ns, nil
 }
 

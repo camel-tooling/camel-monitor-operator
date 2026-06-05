@@ -65,6 +65,7 @@ func (app *nonManagedCamelDeployment) GetAppPhase(ctx context.Context, c client.
 		if app.deploy.Status.Replicas == 0 {
 			return v1alpha1.CamelMonitorPhasePaused
 		}
+
 		return v1alpha1.CamelMonitorPhaseRunning
 	}
 
@@ -89,10 +90,12 @@ func (app *nonManagedCamelDeployment) GetAnnotations() map[string]string {
 // GetPods returns the pods backing the Camel application.
 func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Client) ([]v1alpha1.PodInfo, error) {
 	var cpuLimitString string
+
 	cpuCoreLimit := kubernetes.GetResourcesLimitInMillis(app.GetResourcesLimits(), corev1.ResourceCPU)
 	if cpuCoreLimit > 0 {
 		cpuLimitString = strconv.FormatInt(int64(cpuCoreLimit), 10)
 	}
+
 	return getPods(*app.httpClient, ctx, c, app.deploy.GetNamespace(),
 		app.GetMatchLabelsSelector(), getObservabilityPort(app.GetAnnotations()), true, &cpuLimitString)
 }

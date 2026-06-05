@@ -28,7 +28,6 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -67,7 +66,7 @@ func addPrometheusPodMonitor(ctx context.Context, c client.Client, target *v1alp
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 								TargetLabel:  "__address__",
-								Replacement:  ptr.To("${1}:" + strconv.Itoa(metricsPortNumber)),
+								Replacement:  new("${1}:" + strconv.Itoa(metricsPortNumber)),
 							},
 						},
 					},
@@ -87,10 +86,12 @@ func addPrometheusPodMonitor(ctx context.Context, c client.Client, target *v1alp
 func addCamelMonitorPrometheusCondition(target *v1alpha1.CamelMonitor, err error) {
 	statusCond := metav1.ConditionTrue
 	message := "Created a PodMonitor with the same name of this CamelMonitor"
+
 	if err != nil {
 		statusCond = metav1.ConditionFalse
 		message = "Some error happened while creating PodMonitor: " + err.Error()
 	}
+
 	target.Status.AddCondition(metav1.Condition{
 		Type:               "PrometheusPodMonitor",
 		Status:             statusCond,
@@ -102,6 +103,7 @@ func addCamelMonitorPrometheusCondition(target *v1alpha1.CamelMonitor, err error
 
 func replacePodMonitor(ctx context.Context, c client.Client, pm *monitoringv1.PodMonitor) error {
 	existing := &monitoringv1.PodMonitor{}
+
 	err := c.Get(ctx, ctrl.ObjectKey{
 		Name:      pm.Name,
 		Namespace: pm.Namespace,
@@ -110,8 +112,10 @@ func replacePodMonitor(ctx context.Context, c client.Client, pm *monitoringv1.Po
 		if k8serrors.IsNotFound(err) {
 			return c.Create(ctx, pm)
 		}
+
 		return err
 	}
+
 	pm.ResourceVersion = existing.ResourceVersion
 
 	return c.Update(ctx, pm)

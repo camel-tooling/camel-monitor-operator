@@ -46,7 +46,9 @@ import (
 func getPods(httpClient http.Client, ctx context.Context, c client.Client, namespace string,
 	matchLabelsSelector map[string]string, observabilityPort int, inspect bool, cpuLimit *string) ([]v1alpha1.PodInfo, error) {
 	var podsInfo []v1alpha1.PodInfo
+
 	pods := &corev1.PodList{}
+
 	err := c.List(ctx, pods,
 		ctrl.InNamespace(namespace),
 		ctrl.MatchingLabels(matchLabelsSelector),
@@ -54,10 +56,12 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 	if err != nil {
 		return nil, err
 	}
+
 	for _, pod := range pods.Items {
 		readyCondition := kubernetes.GetPodCondition(pod, corev1.PodReady)
 		isPodReady := readyCondition != nil && readyCondition.Status == corev1.ConditionTrue
 		podIp := pod.Status.PodIP
+
 		podInfo := v1alpha1.PodInfo{
 			Name:           pod.GetName(),
 			Status:         string(pod.Status.Phase),
@@ -82,20 +86,27 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 // inspectPod scan a ready Pod and scrape health and metrics which it stores on podInfo resource.
 func inspectPod(httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodInfo, podIp string, observabilityPort int, cpuLimit *string) {
 	podInfo.ObservabilityService = &v1alpha1.ObservabilityServiceInfo{}
-	if err := setHealth(podInfo, podIp, observabilityPort); err != nil {
-		reason := fmt.Sprintf("Could not scrape health endpoint: %s", err.Error())
+	err := setHealth(podInfo, podIp, observabilityPort)
+	if err != nil {
+		reason := "Could not scrape health endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
-	if err := setMetrics(httpClient, podInfo, podIp, observabilityPort); err != nil {
-		reason := fmt.Sprintf("Could not scrape metrics endpoint: %s", err.Error())
+
+	err = setMetrics(httpClient, podInfo, podIp, observabilityPort)
+	if err != nil {
+		reason := "Could not scrape metrics endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
+
 		if podInfo.Reason != "" {
 			podInfo.Reason += ". "
 		}
+
 		podInfo.Reason += reason
 	}
-	if err := setCPUPressure(podInfo, cpuLimit); err != nil {
+
+	err = setCPUPressure(podInfo, cpuLimit)
+	if err != nil {
 		log.Error(err, "Could not parse cpu usage/max value, skipping")
 	}
 }
@@ -110,10 +121,12 @@ func setCPUPressure(podInfo *v1alpha1.PodInfo, cpuLimit *string) error {
 			if err1 != nil {
 				return err1
 			}
+
 			max, err2 := strconv.ParseFloat(*podInfo.ProcessCPUMax, 64)
 			if err2 != nil {
 				return err2
 			}
+
 			cpuPerc := val / max * 100
 			if cpuPerc >= 90 {
 				podInfo.HasCPUPressure = true
@@ -144,17 +157,19 @@ func getObservabilityPort(appAnnotations map[string]string) int {
 func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 	// NOTE: we're not using a proxy as a design choice in order
 	// to have a faster turnaround.
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s:%d/%s", podIp, port, platform.DefaultObservabilityMetrics), nil)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s:%d/%s", podIp, port, platform.DefaultObservabilityMetrics), nil)
 	if err != nil {
 		return err
 	}
 	// Quarkus runtime specific, see https://github.com/apache/camel-quarkus/issues/7405
 	req.Header.Add("Accept", "text/plain, */*")
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusOK {
 		podInfo.ObservabilityService.MetricsEndpoint = platform.DefaultObservabilityMetrics
 		podInfo.ObservabilityService.MetricsPort = port
@@ -162,6 +177,7 @@ func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string,
 		if podInfo.Runtime == nil {
 			podInfo.Runtime = &v1alpha1.RuntimeInfo{}
 		}
+
 		if podInfo.Runtime.Exchange == nil {
 			podInfo.Runtime.Exchange = &v1alpha1.ExchangeInfo{}
 		}
@@ -170,6 +186,7 @@ func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string,
 		if err != nil {
 			return err
 		}
+
 		if metric, ok := metrics[v1alpha1.Metric_app_info]; ok {
 			populateRuntimeInfo(metric, v1alpha1.Metric_app_info, podInfo)
 		}
@@ -189,11 +206,12 @@ func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string,
 		processFloatVal := getGauge(metrics, v1alpha1.Metric_system_cpu_usage)
 		if processFloatVal != nil {
 			// values is expressed in cores in Prometheus, whilst we want millicores
-			podInfo.ProcessCPUUsed = ptr.To(strconv.FormatFloat(*processFloatVal*1000, 'f', 0, 64))
+			podInfo.ProcessCPUUsed = new(strconv.FormatFloat(*processFloatVal*1000, 'f', 0, 64))
 		}
 
-		podInfo.JVMMemoryUsed = ptr.To(int64(*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_used, "area", "heap")))
-		podInfo.JVMMemoryMax = ptr.To(int64(*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_max, "area", "heap")))
+		podInfo.JVMMemoryUsed = new(int64(*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_used, "area", "heap")))
+
+		podInfo.JVMMemoryMax = new(int64(*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_max, "area", "heap")))
 		if podInfo.JVMMemoryUsed != nil && podInfo.JVMMemoryMax != nil && *podInfo.JVMMemoryMax > 0 {
 			memoryPercentage := float64(*podInfo.JVMMemoryUsed) / float64(*podInfo.JVMMemoryMax) * 100
 			if memoryPercentage >= 90 {
@@ -209,6 +227,7 @@ func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string,
 
 func parseMetrics(reader io.Reader) (map[string]*dto.MetricFamily, error) {
 	parser := expfmt.NewTextParser(model.UTF8Validation)
+
 	mf, err := parser.TextToMetricFamilies(reader)
 	if err != nil {
 		return nil, err
@@ -220,6 +239,7 @@ func parseMetrics(reader io.Reader) (map[string]*dto.MetricFamily, error) {
 func populateRuntimeInfo(metric *dto.MetricFamily, metricName string, podInfo *v1alpha1.PodInfo) {
 	if len(metric.GetMetric()) != 1 {
 		log.Infof("WARN: expected exactly one %s metric, got %d", metricName, len(metric.GetMetric()))
+
 		return
 	}
 
@@ -239,10 +259,13 @@ func getCounter(metrics map[string]*dto.MetricFamily, metricName string) *float6
 	if metric, ok := metrics[metricName]; ok {
 		if len(metric.GetMetric()) == 0 {
 			log.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
+
 			return nil
 		}
+
 		if metric.GetMetric()[0].GetCounter() == nil {
 			log.Debugf("expected %s metric to be a counter", metricName)
+
 			return nil
 		}
 
@@ -263,14 +286,17 @@ func getGaugeWithLabel(metrics map[string]*dto.MetricFamily, metricName, labelNa
 
 func getGaugeInternal(metrics map[string]*dto.MetricFamily, metricName, labelName, labelValue string) *float64 {
 	var total float64
+
 	if metric, ok := metrics[metricName]; ok {
 		if len(metric.GetMetric()) == 0 {
 			log.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
+
 			return nil
 		}
+
 		for _, g := range metric.GetMetric() {
-			if g.GetGauge() != nil && accept(g.Label, labelName, labelValue) {
-				total += *g.GetGauge().Value
+			if g.GetGauge() != nil && accept(g.GetLabel(), labelName, labelValue) {
+				total += g.GetGauge().GetValue()
 			}
 		}
 	}
@@ -284,8 +310,9 @@ func accept(labelPair []*dto.LabelPair, labelName, labelValue string) bool {
 	if labelName == "" {
 		return true
 	}
+
 	for _, lp := range labelPair {
-		if *lp.Name == labelName && *lp.Value == labelValue {
+		if lp.GetName() == labelName && lp.GetValue() == labelValue {
 			return true
 		}
 	}
@@ -301,6 +328,7 @@ func setHealth(podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 		return err
 	}
 	defer resp.Body.Close()
+
 	status := resp.Status
 	// The endpoint reports 503 when the service is down, but still provide the
 	// health information
@@ -313,6 +341,7 @@ func setHealth(podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 			return err
 		}
 	}
+
 	if podInfo.Runtime == nil {
 		podInfo.Runtime = &v1alpha1.RuntimeInfo{
 			Status: status,
@@ -324,10 +353,12 @@ func setHealth(podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 
 func parseHealthStatus(reader io.Reader) (string, error) {
 	var healthContent map[string]any
+
 	err := json.NewDecoder(reader).Decode(&healthContent)
 	if err != nil {
 		return "", err
 	}
+
 	status, ok := healthContent["status"].(string)
 	if !ok {
 		return "", errors.New("health endpoint syntax error: missing .status property")
@@ -361,11 +392,13 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 
 	if allPodsReady(pods) {
 		monitoredCondition = metav1.ConditionTrue
+
 		monitoredMessage = "Success"
 		if app.Status.Replicas != nil && len(pods) != int(*app.Status.Replicas) {
 			monitoredMessage = fmt.Sprintf("%d out of %d pods available", len(pods), int(*app.Status.Replicas))
 		}
 	}
+
 	targetApp.Status.AddCondition(metav1.Condition{
 		Type:               "Monitored",
 		Status:             monitoredCondition,
@@ -381,6 +414,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 		healthCondition = metav1.ConditionTrue
 		healthMessage = "All Pods are reported as healthy"
 	}
+
 	targetApp.Status.AddCondition(metav1.Condition{
 		Type:               "Healthy",
 		Status:             healthCondition,
@@ -391,6 +425,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 
 	memoryPressureCondition := metav1.ConditionFalse
 	memoryPressureMessage := "No JVM memory pressure detected"
+
 	if podMemoryPressure(pods) {
 		memoryPressureCondition = metav1.ConditionTrue
 		memoryPressureMessage = "At least one Pod has JVM memory pressure"
@@ -406,6 +441,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 
 	cpuPressureCondition := metav1.ConditionFalse
 	cpuPressureMessage := "No CPU pressure detected"
+
 	if podCpuPressure(pods) {
 		cpuPressureCondition = metav1.ConditionTrue
 		cpuPressureMessage = "At least one Pod has JVM memory pressure"
@@ -452,6 +488,7 @@ func allPodsReady(pods []v1alpha1.PodInfo) bool {
 
 func countPodsWithStatus(pods []v1alpha1.PodInfo, status string) int {
 	podsCount := 0
+
 	for _, pod := range pods {
 		if status == pod.Status {
 			podsCount++

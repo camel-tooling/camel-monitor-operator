@@ -83,6 +83,7 @@ func getCamelHighFailureRateCritical() monitoringv1.Rule {
 
 func replacePrometheusRule(ctx context.Context, c client.Client, pr *monitoringv1.PrometheusRule) error {
 	existing := &monitoringv1.PrometheusRule{}
+
 	err := c.Get(ctx, ctrl.ObjectKey{
 		Name:      pr.Name,
 		Namespace: pr.Namespace,
@@ -91,8 +92,10 @@ func replacePrometheusRule(ctx context.Context, c client.Client, pr *monitoringv
 		if k8serrors.IsNotFound(err) {
 			return c.Create(ctx, pr)
 		}
+
 		return err
 	}
+
 	pr.ResourceVersion = existing.ResourceVersion
 
 	return c.Update(ctx, pr)

@@ -39,7 +39,7 @@ LINTER ?= $(LOCALBIN)/golangci-lint
 DEADCODE ?= $(LOCALBIN)/deadcode
 GOVULNCHECK ?= $(LOCALBIN)/govulncheck
 GOIMPORT ?= $(LOCALBIN)/goimports
-LINTER_VERSION ?= v1.64.5
+LINTER_VERSION ?= v2.12.2
 GOVULNCHECK_VERSION ?= latest
 LINT_GOGC ?= 20
 LINT_DEADLINE ?= 10m
@@ -137,12 +137,12 @@ codegen:
 	@echo "// ***********************" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
 	@echo "const (" >> $(VERSIONFILE)
-	@echo "  // Version -- " >> $(VERSIONFILE)
+	@echo "  // Version -- ." >> $(VERSIONFILE)
 	@echo "  Version = \"$(CUSTOM_VERSION)\"" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
 	@echo ")" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
-	@echo "// GitCommit must be provided during application build" >> $(VERSIONFILE)
+	@echo "// GitCommit must be provided during application build." >> $(VERSIONFILE)
 	@echo "var GitCommit string" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
 
@@ -273,11 +273,11 @@ check: lint vuln
 
 .PHONY: lint
 lint: golangci-lint
-	GOGC=$(LINT_GOGC) $(LINTER) run --config .golangci.yml --out-format colored-tab --timeout $(LINT_DEADLINE) --verbose
+	GOGC=$(LINT_GOGC) $(LINTER) run --config .golangci.yml --timeout $(LINT_DEADLINE) --verbose
 
 .PHONY: lint-fix
 lint-fix: golangci-lint
-	GOGC=$(LINT_GOGC) $(LINTER) run --config .golangci.yml --out-format colored-tab --timeout $(LINT_DEADLINE) --fix
+	GOGC=$(LINT_GOGC) $(LINTER) run --config .golangci.yml --timeout $(LINT_DEADLINE) --fix
 
 .PHONY: vuln
 vuln: govulncheck
@@ -514,7 +514,7 @@ $(LOCALBIN):
 
 .PHONY: golangci-lint
 golangci-lint:
-	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(LINTER_VERSION)
+	GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINTER_VERSION)
 
 .PHONY: govulncheck
 govulncheck:

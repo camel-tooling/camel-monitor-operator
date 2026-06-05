@@ -28,5 +28,6 @@ func GetPodCondition(pod corev1.Pod, conditionType corev1.PodConditionType) *cor
 			return &condition
 		}
 	}
+
 	return nil
 }

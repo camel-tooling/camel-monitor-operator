@@ -31,19 +31,24 @@ import (
 // LoadResourceFromYaml returns a Kubernetes resource from its serialized YAML definition.
 func LoadResourceFromYaml(scheme *runtime.Scheme, data string) (ctrl.Object, error) {
 	source := []byte(data)
+
 	jsonSource, err := yaml.ToJSON(source)
 	if err != nil {
 		return nil, err
 	}
+
 	u := unstructured.Unstructured{}
+
 	err = u.UnmarshalJSON(jsonSource)
 	if err != nil {
 		return nil, err
 	}
+
 	ro, err := runtimeObjectFromUnstructured(scheme, &u)
 	if err != nil {
 		return nil, err
 	}
+
 	o, ok := ro.(ctrl.Object)
 	if !ok {
 		return nil, fmt.Errorf("type assertion failed: %v", ro)
@@ -61,9 +66,11 @@ func runtimeObjectFromUnstructured(scheme *runtime.Scheme, u *unstructured.Unstr
 	if err != nil {
 		return nil, fmt.Errorf("error running MarshalJSON on unstructured object: %w", err)
 	}
+
 	ro, _, err := decoder.Decode(b, &gvk, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode json data with gvk(%v): %w", gvk.String(), err)
 	}
+
 	return ro, nil
 }

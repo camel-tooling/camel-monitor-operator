@@ -36,19 +36,24 @@ func main() {
 	fileBin, err := os.ReadFile(filepath.Clean(fileName))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "cannot read file %s: %v\n", fileName, err)
+
 		os.Exit(1)
 	}
+
 	file := string(fileBin)
 
 	licenseBin, err := os.ReadFile(filepath.Clean(licenseName))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "cannot read file %s: %v\n", licenseName, err)
+
 		os.Exit(1)
 	}
+
 	license := string(licenseBin)
 
 	if !strings.Contains(file, license) {
 		_, _ = fmt.Fprintf(os.Stderr, "file %s does not contain license\n", fileName)
+
 		os.Exit(1)
 	}
 }

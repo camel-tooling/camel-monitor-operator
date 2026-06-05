@@ -29,7 +29,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 // nonManagedCamelCronjob represents a cron Camel application built and deployed outside the operator lifecycle.
@@ -55,6 +54,7 @@ func (app *nonManagedCamelCronjob) CamelMonitor(ctx context.Context, c client.Cl
 		},
 	}
 	newApp.SetOwnerReferences(references)
+
 	return &newApp
 }
 
@@ -71,7 +71,7 @@ func (app *nonManagedCamelCronjob) GetAppPhase(ctx context.Context, c client.Cli
 // GetReplicas returns the number of desired replicas for the backing Camel application.
 func (app *nonManagedCamelCronjob) GetReplicas() *int32 {
 	// In the case of a CronJob we use the number of active jobs instead.
-	return ptr.To(int32(len(app.cron.Status.Active)))
+	return new(int32(len(app.cron.Status.Active)))
 }
 
 // GetAppImage returns the container image of the backing Camel application.
@@ -109,10 +109,12 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 		runningPods := countPodsWithStatus(pods, "Running")
 		succeededPods := countPodsWithStatus(pods, "Succeeded")
 		info := fmt.Sprintf("%d out of last %d job succeeded", succeededPods, len(pods)-runningPods)
+
 		healthCond := metav1.ConditionFalse
 		if len(pods) == runningPods+succeededPods {
 			healthCond = metav1.ConditionTrue
 		}
+
 		targetApp.Status.AddCondition(metav1.Condition{
 			Type:               "Healthy",
 			Status:             healthCond,
@@ -120,17 +122,21 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 			Reason:             "HealthCheckCompleted",
 			Message:            info,
 		})
+
 		schedulingMessage := ""
 		// Special condition for cronjob
 		if app.cron.Status.LastScheduleTime != nil {
 			schedulingMessage += "Last scheduled time: " + app.cron.Status.LastScheduleTime.Format("2006-01-02 15:04:05")
 		}
+
 		if app.cron.Status.LastSuccessfulTime != nil {
 			if schedulingMessage != "" {
 				schedulingMessage += "; "
 			}
+
 			schedulingMessage += "Last successful time: " + app.cron.Status.LastSuccessfulTime.Format("2006-01-02 15:04:05")
 		}
+
 		targetApp.Status.AddCondition(metav1.Condition{
 			Type:               "CronJobExecution",
 			Status:             metav1.ConditionTrue,

@@ -39,7 +39,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Actions are cached here for performance reasons
+// Actions are cached here for performance reasons.
 var actions = []Action{}
 
 func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
@@ -47,10 +47,12 @@ func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
 	if err != nil {
 		return err
 	}
+
 	hasGrafanaDashboardAPI, err := grafanaCRDExists(ctx, c)
 	if err != nil {
 		return err
 	}
+
 	return add(mgr, newReconciler(mgr, c, hasPrometheusAPI, hasGrafanaDashboardAPI))
 }
 
@@ -62,6 +64,7 @@ func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasG
 		log.Log.WithName("reconciler").Info("No presence of Prometheus PodMonitor custom resource. The operator" +
 			" won't be able to create Prometheus resources automatically!")
 	}
+
 	if hasGrafanaCRDs {
 		log.Log.WithName("reconciler").Info("Detected the presence of GrafanaDashboard custom resource. If enabled, the operator" +
 			" will create Grafana dashboards resources automatically! NOTE: this is an experimental feature.")
@@ -109,11 +112,13 @@ type reconcileApp struct {
 
 func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	rlog := Log.WithValues("request-namespace", request.Namespace, "request-name", request.Name)
+
 	var instance v1alpha1.CamelMonitor
 	if err := r.client.Get(ctx, request.NamespacedName, &instance); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
+
 		return reconcile.Result{}, err
 	}
 
@@ -123,12 +128,15 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 		}
 		// when we initialize, we create the PrometheusRule alert as well.
 		if r.hasPrometheusCRDs && platform.GetCreatePrometheusRuleAlerts() == "true" {
-			if err := addPrometheusRuleAlerts(ctx, r.client); err != nil {
+			err := addPrometheusRuleAlerts(ctx, r.client)
+			if err != nil {
 				return reconcile.Result{}, err
 			}
+
 			log.Info("Added a generic alert PrometheusRule")
 		}
 	}
+
 	var err error
 
 	target := instance.DeepCopy()
@@ -141,23 +149,29 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 		if !a.CanHandle(target) {
 			continue
 		}
+
 		targetLog.Debugf("Invoking action %s", a.Name())
 
 		target, err = a.Handle(ctx, target)
 		if err != nil {
 			event.NotifyAppError(ctx, r.client, r.recorder, &instance, target, err)
+
 			if target != nil {
 				_ = r.update(ctx, &instance, target, &targetLog)
 			}
+
 			return reconcile.Result{}, err
 		}
 
 		if target != nil {
-			if err := r.update(ctx, &instance, target, &targetLog); err != nil {
+			err := r.update(ctx, &instance, target, &targetLog)
+			if err != nil {
 				event.NotifyAppError(ctx, r.client, r.recorder, &instance, target, err)
+
 				return reconcile.Result{}, err
 			}
 		}
+
 		event.NotifyAppUpdated(ctx, r.client, r.recorder, &instance, target)
 	}
 
@@ -165,8 +179,10 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 }
 
 func (r *reconcileApp) update(ctx context.Context, base *v1alpha1.CamelMonitor, target *v1alpha1.CamelMonitor, log *log.Logger) error {
-	if err := r.client.Status().Patch(ctx, target, ctrl.MergeFrom(base)); err != nil {
+	err := r.client.Status().Patch(ctx, target, ctrl.MergeFrom(base))
+	if err != nil {
 		event.NotifyAppError(ctx, r.client, r.recorder, base, target, err)
+
 		return err
 	}
 

@@ -19,7 +19,6 @@ package platform
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -67,10 +66,12 @@ var defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "
 func IsCurrentOperatorGlobal() bool {
 	if watchNamespace, envSet := os.LookupEnv(OperatorWatchNamespaceEnvVariable); !envSet || strings.TrimSpace(watchNamespace) == "" {
 		log.Debug("Operator is global to all namespaces")
+
 		return true
 	}
 
 	log.Debug("Operator is local to namespace")
+
 	return false
 }
 
@@ -79,6 +80,7 @@ func GetOperatorWatchNamespace() string {
 	if namespace, envSet := os.LookupEnv(OperatorWatchNamespaceEnvVariable); envSet {
 		return namespace
 	}
+
 	return ""
 }
 
@@ -87,6 +89,7 @@ func GetOperatorNamespace() string {
 	if podNamespace, envSet := os.LookupEnv(OperatorNamespaceEnvVariable); envSet {
 		return podNamespace
 	}
+
 	return ""
 }
 
@@ -95,6 +98,7 @@ func GetCreatePrometheusPodMonitor() string {
 	if create, envSet := os.LookupEnv(createPrometheusPodMonitorEnvVariable); envSet {
 		return create
 	}
+
 	return ""
 }
 
@@ -103,6 +107,7 @@ func GetCreatePrometheusRuleAlerts() string {
 	if create, envSet := os.LookupEnv(createPrometheusRulesEnvVariable); envSet {
 		return create
 	}
+
 	return ""
 }
 
@@ -111,12 +116,13 @@ func GetCreateGrafanaDashboard() string {
 	if create, envSet := os.LookupEnv(createGrafanaDashboardEnvVariable); envSet {
 		return create
 	}
+
 	return ""
 }
 
 // GetOperatorLockName returns the name of the lock lease that is electing a leader on the particular namespace.
 func GetOperatorLockName(operatorID string) string {
-	return fmt.Sprintf("%s-lock", operatorID)
+	return operatorID + "-lock"
 }
 
 // GetMonitorLabelSelector returns the label selector used to determine a Camel application.
@@ -124,6 +130,7 @@ func GetMonitorLabelSelector() string {
 	if labelSelector, envSet := os.LookupEnv(CamelMonitorLabelSelector); envSet && labelSelector != "" {
 		return labelSelector
 	}
+
 	return v1alpha1.MonitorLabel
 }
 
@@ -152,6 +159,7 @@ func getLabelFromEnvVar(envVar string, defaultReturnLabels map[string]string) ma
 				"fallback to default value %s", envVar, defaultReturnLabels)
 		}
 	}
+
 	return defaultReturnLabels
 }
 
@@ -160,6 +168,7 @@ func GetGrafanaDatasource() string {
 	if grafanaDatasourceEnvVar, envSet := os.LookupEnv(GrafanaDatasourceEnvVariable); envSet && grafanaDatasourceEnvVar != "" {
 		return grafanaDatasourceEnvVar
 	}
+
 	return defaultGrafanaDatasource
 }
 

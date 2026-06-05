@@ -89,6 +89,7 @@ func (r *instrumentedReconciler) Reconcile(ctx context.Context, request reconcil
 
 func resultLabelFor(res reconcile.Result, err error) string {
 	var label resultLabelValue
+
 	switch {
 	case err != nil:
 		label = errored

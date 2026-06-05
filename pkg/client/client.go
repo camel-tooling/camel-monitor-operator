@@ -42,6 +42,7 @@ type Injectable interface {
 type DefaultClient struct {
 	ctrl.Client
 	kubernetes.Interface
+
 	Camel camel.Interface
 }
 
@@ -51,11 +52,14 @@ func (c *DefaultClient) CamelV1alpha1() camelv1alpha1.CamelV1alpha1Interface {
 
 // FromManager creates a new k8s client from a manager object.
 func FromManager(manager manager.Manager) (Client, error) {
-	var err error
-	var clientset kubernetes.Interface
+	var (
+		err       error
+		clientset kubernetes.Interface
+	)
 	if clientset, err = kubernetes.NewForConfig(manager.GetConfig()); err != nil {
 		return nil, err
 	}
+
 	var camelClientset camel.Interface
 	if camelClientset, err = camel.NewForConfig(manager.GetConfig()); err != nil {
 		return nil, err

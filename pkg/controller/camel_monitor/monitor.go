@@ -45,6 +45,7 @@ func NewMonitorAction(hasPrometheusCRDs, hasGrafanaCRDs bool) Action {
 
 type monitorAction struct {
 	baseAction
+
 	// We cache the discovery call for performance reasons
 	hasPrometheusCRDs bool
 	hasGrafanaCRDs    bool
@@ -60,18 +61,22 @@ func (action *monitorAction) CanHandle(cmon *v1alpha1.CamelMonitor) bool {
 
 func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMonitor) (*v1alpha1.CamelMonitor, error) {
 	action.L.Infof("Monitoring App %s/%s with status %s", cmon.Namespace, cmon.Name, cmon.Status.Phase)
+
 	objOwner, err := lookupObject(ctx, action.client,
 		cmon.Annotations[v1alpha1.MonitorImportedKindLabel], cmon.Namespace, cmon.Annotations[v1alpha1.MonitorImportedNameLabel])
 	if err != nil {
 		return nil, err
 	}
+
 	if objOwner == nil {
 		return nil, fmt.Errorf("baking deployment does not exist for App %s/%s", cmon.Namespace, cmon.Name)
 	}
+
 	nonManagedApp, err := synthetic.NonManagedCamelMonitorlicationFactory(*objOwner)
 	if err != nil {
 		return nil, err
 	}
+
 	targetApp := cmon.DeepCopy()
 	// Important: we keep any previous existing info, so that, in case of scaling to 0
 	// we maintain the latest scraped information available.
@@ -85,18 +90,22 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	appPhase := nonManagedApp.GetAppPhase(ctx, action.client)
 	targetApp.Status.Phase = appPhase
 	targetApp.Status.Image = deployImage
+
 	pods, err := nonManagedApp.GetPods(ctx, action.client)
 	if err != nil {
 		return targetApp, err
 	}
+
 	targetApp.Status.Pods = pods
 	targetApp.Status.Replicas = nonManagedApp.GetReplicas()
+
 	if pods != nil {
 		// Only if any pod is ready
 		targetRuntimeInfo := getInfo(pods)
 		if targetRuntimeInfo != nil {
 			targetApp.Status.Info = formatRuntimeInfo(targetRuntimeInfo)
 		}
+
 		appRuntimeInfo := getInfo(cmon.Status.Pods)
 		if appRuntimeInfo != nil && targetRuntimeInfo != nil {
 			pollingInterval := getPollingInterval(targetApp)
@@ -104,17 +113,22 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 			sliWarnPerc := getSLIExchangeWarningThreshold(targetApp)
 			targetApp.Status.SuccessRate = getSLIExchangeSuccessRate(*appRuntimeInfo, *targetRuntimeInfo, &pollingInterval, sliErrPerc, sliWarnPerc)
 		}
+
 		if action.hasPrometheusCRDs && platform.GetCreatePrometheusPodMonitor() == "true" {
-			if err := addPrometheusPodMonitor(ctx, action.client, targetApp, nonManagedApp.GetMatchLabelsSelector()); err != nil {
+			err := addPrometheusPodMonitor(ctx, action.client, targetApp, nonManagedApp.GetMatchLabelsSelector())
+			if err != nil {
 				return targetApp, err
 			}
 		}
+
 		if action.hasGrafanaCRDs && platform.GetCreateGrafanaDashboard() == "true" {
-			if err := addGrafanaDashboard(ctx, action.client, targetApp, nonManagedApp.GetResourcesLimits()); err != nil {
+			err := addGrafanaDashboard(ctx, action.client, targetApp, nonManagedApp.GetResourcesLimits())
+			if err != nil {
 				return targetApp, err
 			}
 		}
 	}
+
 	nonManagedApp.SetMonitoringCondition(cmon, targetApp, pods)
 
 	return targetApp, nil
@@ -122,6 +136,7 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 
 func lookupObject(ctx context.Context, c client.Client, kind, ns string, name string) (*ctrl.Object, error) {
 	var obj ctrl.Object
+
 	switch kind {
 	case "Deployment":
 		obj = &appsv1.Deployment{
@@ -148,11 +163,13 @@ func lookupObject(ctx context.Context, c client.Client, kind, ns string, name st
 	default:
 		return nil, fmt.Errorf("cannot manage Camel application of type %s", kind)
 	}
+
 	key := ctrl.ObjectKey{
 		Namespace: ns,
 		Name:      name,
 	}
-	if err := c.Get(ctx, key, obj); err != nil && k8serrors.IsNotFound(err) {
+	err := c.Get(ctx, key, obj)
+	if err != nil && k8serrors.IsNotFound(err) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -204,16 +221,19 @@ func formatRuntimeInfo(runtimeInfo *v1alpha1.RuntimeInfo) string {
 			runtimeInfo.RuntimeProvider, runtimeInfo.RuntimeVersion, runtimeInfo.CamelVersion,
 		)
 	}
+
 	return ""
 }
 
 func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval *time.Duration, sliErrPerc, sliWarnPerc int) *v1alpha1.SLIExchangeSuccessRate {
 	var failureRate float64
+
 	sliExchangeSuccessRate := v1alpha1.SLIExchangeSuccessRate{
 		SamplingIntervalDuration: pollingInteval,
 	}
 
 	totalLastInterval := target.Exchange.Total - app.Exchange.Total
+
 	failedLastInterval := target.Exchange.Failed - app.Exchange.Failed
 	if totalLastInterval > 0 {
 		failureRate = float64(failedLastInterval) / float64(totalLastInterval) * 100
@@ -224,6 +244,7 @@ func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval 
 	if totalLastInterval >= 0 {
 		sliExchangeSuccessRate.SamplingIntervalTotal = totalLastInterval
 	}
+
 	if failedLastInterval >= 0 {
 		sliExchangeSuccessRate.SamplingIntervalFailed = failedLastInterval
 	}

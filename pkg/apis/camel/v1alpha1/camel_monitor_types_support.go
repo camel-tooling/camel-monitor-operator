@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -60,6 +59,7 @@ func (cmonStatus *CamelMonitorStatus) AddCondition(condition metav1.Condition) {
 	if cmonStatus.Conditions == nil {
 		cmonStatus.Conditions = []metav1.Condition{}
 	}
+
 	cmonStatus.Conditions = append(cmonStatus.Conditions, condition)
 }
 
@@ -98,8 +98,8 @@ func (monitor *CamelMonitor) GetOwnerReferences() []metav1.OwnerReference {
 			Kind:               monitor.Kind,
 			Name:               monitor.Name,
 			UID:                monitor.UID,
-			Controller:         ptr.To(true),
-			BlockOwnerDeletion: ptr.To(true),
+			Controller:         new(true),
+			BlockOwnerDeletion: new(true),
 		},
 	}
 }

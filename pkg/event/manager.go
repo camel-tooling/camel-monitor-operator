@@ -34,9 +34,11 @@ func NotifyAppError(ctx context.Context, c client.Client, recorder events.EventR
 	if newResource != nil {
 		app = newResource
 	}
+
 	if app == nil {
 		return
 	}
+
 	recorder.Eventf(app, nil, corev1.EventTypeWarning, "AppError", "ReconcileFailed", "Cannot reconcile App %s: %v", app.Name, err)
 }
 
@@ -45,10 +47,12 @@ func NotifyAppUpdated(ctx context.Context, c client.Client, recorder events.Even
 	if newResource == nil {
 		return
 	}
+
 	oldPhase := ""
 	if old != nil {
 		oldPhase = string(old.Status.Phase)
 	}
+
 	notifyIfPhaseUpdated(ctx, c, recorder, newResource, oldPhase, string(newResource.Status.Phase), "App", newResource.Name,
 		"AppUpdated", "")
 }
@@ -63,5 +67,6 @@ func notifyIfPhaseUpdated(ctx context.Context, c client.Client, recorder events.
 	if phase == "" {
 		phase = "[none]"
 	}
+
 	recorder.Eventf(newResource, nil, corev1.EventTypeNormal, reason, "Reconciled", "%s %q in phase %q%s", resourceType, name, phase, info)
 }

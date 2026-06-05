@@ -51,5 +51,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CamelMonitorList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+
 	return nil
 }

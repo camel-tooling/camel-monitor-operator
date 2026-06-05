@@ -18,15 +18,16 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
+	"errors"
 	"math"
 )
 
 // IToInt8 attempts to convert safely an int to an int8.
 func IToInt8(x int) (*int8, error) {
 	if x < math.MinInt8 || x > math.MaxInt8 {
-		return nil, fmt.Errorf("integer overflow casting to int8 type")
+		return nil, errors.New("integer overflow casting to int8 type")
 	}
+
 	casted := int8(x)
 
 	return &casted, nil
