@@ -95,30 +95,29 @@ func TestOLMNamespacedInstallation(t *testing.T) {
 			// No CamelMonitors around (garbage collected)
 			g.Eventually(CamelMonitors(t, ctx, ns)).Should(BeEmpty())
 		})
-	})
 
-	// Verify the app running in another namespace is not monitored
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
-		// Verify an app running in the same namespace
-		t.Run("simple Deployment (non monitored)", func(t *testing.T) {
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
-				),
-			)
-			// Add the labels to discover it
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
-				),
-			)
-			// No CamelMonitors in this namespace
-			g.Consistently(CamelMonitors(t, ctx, ns2), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
+		// Verify the app running in another namespace is not monitored
+		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
+			// Verify an app running in the same namespace
+			t.Run("simple Deployment (non monitored)", func(t *testing.T) {
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
+					),
+				)
+				// Add the labels to discover it
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
+					),
+				)
+				// No CamelMonitors in this namespace
+				g.Consistently(CamelMonitors(t, ctx, ns2), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
+			})
 		})
 	})
-
 }
 
 func TestOLMGlobalInstallation(t *testing.T) {
@@ -140,47 +139,46 @@ func TestOLMGlobalInstallation(t *testing.T) {
 
 		// Check the operator pod is running
 		g.Eventually(PodStatusPhase(t, ctx, ns, "camel.apache.org/component=operator"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
-	})
 
-	// Verify the app running in another namespace is monitored
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
-		// Verify an app running in the same namespace
-		t.Run("simple Deployment (monitored)", func(t *testing.T) {
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
-				),
-			)
-			// Add the labels to discover it
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-global-monitored -n "+ns2, " ")...,
-				),
-			)
-			// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-			g.Eventually(CamelMonitor(t, ctx, ns2, "camel-global-monitored")).Should(Not(BeNil()))
-			g.Eventually(
-				CamelMonitorStatus(t, ctx, ns2, "camel-global-monitored"),
-				TestTimeoutMedium,
-			).Should(
-				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-					"Replicas":    PointTo(Equal(int32(1))),
-					"SuccessRate": Not(BeNil()),
-				}),
-			)
-			// Delete deployment
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("delete deployment camel-app -n "+ns2, " ")...,
-				),
-			)
-			// No CamelMonitors around (garbage collected)
-			g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
+		// Verify the app running in another namespace is monitored
+		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
+			// Verify an app running in the same namespace
+			t.Run("simple Deployment (monitored)", func(t *testing.T) {
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
+					),
+				)
+				// Add the labels to discover it
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-global-monitored -n "+ns2, " ")...,
+					),
+				)
+				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
+				g.Eventually(CamelMonitor(t, ctx, ns2, "camel-global-monitored")).Should(Not(BeNil()))
+				g.Eventually(
+					CamelMonitorStatus(t, ctx, ns2, "camel-global-monitored"),
+					TestTimeoutMedium,
+				).Should(
+					MatchFields(IgnoreExtras, Fields{
+						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
+						"Replicas":    PointTo(Equal(int32(1))),
+						"SuccessRate": Not(BeNil()),
+					}),
+				)
+				// Delete deployment
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("delete deployment camel-app -n "+ns2, " ")...,
+					),
+				)
+				// No CamelMonitors around (garbage collected)
+				g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
+			})
 		})
 	})
-
 }
