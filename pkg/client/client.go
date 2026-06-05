@@ -56,12 +56,16 @@ func FromManager(manager manager.Manager) (Client, error) {
 		err       error
 		clientset kubernetes.Interface
 	)
-	if clientset, err = kubernetes.NewForConfig(manager.GetConfig()); err != nil {
+
+	clientset, err = kubernetes.NewForConfig(manager.GetConfig())
+	if err != nil {
 		return nil, err
 	}
 
 	var camelClientset camel.Interface
-	if camelClientset, err = camel.NewForConfig(manager.GetConfig()); err != nil {
+
+	camelClientset, err = camel.NewForConfig(manager.GetConfig())
+	if err != nil {
 		return nil, err
 	}
 

@@ -93,7 +93,7 @@ func GetOperatorNamespace() string {
 	return ""
 }
 
-// GetCreatePodMonitor returns the variable controlling the Prometheus Pod Monitor creation.
+// GetCreatePrometheusPodMonitor returns the variable controlling the Prometheus Pod Monitor creation.
 func GetCreatePrometheusPodMonitor() string {
 	if create, envSet := os.LookupEnv(createPrometheusPodMonitorEnvVariable); envSet {
 		return create
@@ -134,7 +134,7 @@ func GetMonitorLabelSelector() string {
 	return v1alpha1.MonitorLabel
 }
 
-// GetPrometheusLabels returns the label selector used to link a Prometheus PodMonitor to a Prometheus instance.
+// GetPrometheusRuleLabels returns the label selector used to link a Prometheus PodMonitor to a Prometheus instance.
 func GetPrometheusRuleLabels() map[string]string {
 	return getLabelFromEnvVar(PrometheusRuleLabelEnvVariable, defaultPrometheusRuleLabels)
 }
@@ -212,7 +212,7 @@ func GetSLIExchangeErrorThreshold() int {
 	return getOperatorEnvAsInt(SLIExchangeErrorPercentage, "SLI exchange error threshold", defaultSLIExchangeErrorPercentage)
 }
 
-// GetSLIExchangeWarnThreshold returns the SLI Exchange warning threshold configuration. It fallbacks to default value.
+// GetSLIExchangeWarningThreshold returns the SLI Exchange warning threshold configuration. It fallbacks to default value.
 func GetSLIExchangeWarningThreshold() int {
 	return getOperatorEnvAsInt(SLIExchangeWarningPercentage, "SLI exchange warning threshold", defaultSLIExchangeWarningPercentage)
 }

@@ -17,7 +17,7 @@ limitations under the License.
 
 // NOTE: Boilerplate only.  Ignore this file.
 
-// Package v1 contains API Schema definitions for the camel v1 API group
+// Package v1alpha1 contains API Schema definitions for the camel v1alpha1 API group
 // +kubebuilder:object:generate=true
 // +groupName=camel.apache.org
 package v1alpha1

@@ -121,7 +121,7 @@ func replacePodMonitor(ctx context.Context, c client.Client, pm *monitoringv1.Po
 	return c.Update(ctx, pm)
 }
 
-func prometheusCRDExists(ctx context.Context, c client.Client) (bool, error) {
+func prometheusCRDExists(c client.Client) (bool, error) {
 	_, err := c.Discovery().ServerResourcesForGroupVersion("monitoring.coreos.com/v1")
 	if err != nil && k8serrors.IsNotFound(err) {
 		return false, nil

@@ -18,7 +18,6 @@ limitations under the License.
 package event
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -55,8 +54,6 @@ func requireNoEvent(t *testing.T, recorder *events.FakeRecorder) {
 }
 
 func TestNotifyAppError(t *testing.T) {
-	ctx := context.Background()
-
 	tests := []struct {
 		name        string
 		old         *v1alpha1.CamelMonitor
@@ -88,8 +85,6 @@ func TestNotifyAppError(t *testing.T) {
 			recorder := events.NewFakeRecorder(1)
 
 			NotifyAppError(
-				ctx,
-				nil,
 				recorder,
 				tt.old,
 				tt.newResource,
@@ -116,8 +111,6 @@ func TestNotifyAppError(t *testing.T) {
 }
 
 func TestNotifyAppUpdated(t *testing.T) {
-	ctx := context.Background()
-
 	tests := []struct {
 		name        string
 		oldPhase    string
@@ -171,7 +164,7 @@ func TestNotifyAppUpdated(t *testing.T) {
 				}
 			}
 
-			NotifyAppUpdated(ctx, nil, recorder, oldApp, newApp)
+			NotifyAppUpdated(recorder, oldApp, newApp)
 
 			if tt.expectEvent {
 				evt := requireEvent(t, recorder)
@@ -193,7 +186,6 @@ func TestNotifyAppUpdated(t *testing.T) {
 }
 
 func TestNotifyIfPhaseUpdated_EmptyPhase(t *testing.T) {
-	ctx := context.Background()
 	recorder := events.NewFakeRecorder(1)
 
 	app := &v1alpha1.CamelMonitor{
@@ -201,8 +193,6 @@ func TestNotifyIfPhaseUpdated_EmptyPhase(t *testing.T) {
 	}
 
 	notifyIfPhaseUpdated(
-		ctx,
-		nil,
 		recorder,
 		app,
 		"Ready",

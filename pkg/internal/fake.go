@@ -53,6 +53,7 @@ func (c *TestClient) Status() ctrl.SubResourceWriter {
 // you need to provide CRD objects (camelObjs) separately from core objects.
 func NewFakeClient(objs ...ctrl.Object) (client.Client, error) {
 	scheme := runtime.NewScheme()
+
 	err := corev1.AddToScheme(scheme)
 	if err != nil {
 		return nil, err

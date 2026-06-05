@@ -18,10 +18,7 @@ limitations under the License.
 package event
 
 import (
-	"context"
-
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
-	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/events"
 
@@ -29,7 +26,7 @@ import (
 )
 
 // NotifyAppError automatically generates error events when the app reconcile cycle phase has an error.
-func NotifyAppError(ctx context.Context, c client.Client, recorder events.EventRecorder, old, newResource *v1alpha1.CamelMonitor, err error) {
+func NotifyAppError(recorder events.EventRecorder, old, newResource *v1alpha1.CamelMonitor, err error) {
 	app := old
 	if newResource != nil {
 		app = newResource
@@ -43,7 +40,7 @@ func NotifyAppError(ctx context.Context, c client.Client, recorder events.EventR
 }
 
 // NotifyAppUpdated automatically generates events when the app changes.
-func NotifyAppUpdated(ctx context.Context, c client.Client, recorder events.EventRecorder, old, newResource *v1alpha1.CamelMonitor) {
+func NotifyAppUpdated(recorder events.EventRecorder, old, newResource *v1alpha1.CamelMonitor) {
 	if newResource == nil {
 		return
 	}
@@ -53,11 +50,11 @@ func NotifyAppUpdated(ctx context.Context, c client.Client, recorder events.Even
 		oldPhase = string(old.Status.Phase)
 	}
 
-	notifyIfPhaseUpdated(ctx, c, recorder, newResource, oldPhase, string(newResource.Status.Phase), "App", newResource.Name,
+	notifyIfPhaseUpdated(recorder, newResource, oldPhase, string(newResource.Status.Phase), "App", newResource.Name,
 		"AppUpdated", "")
 }
 
-func notifyIfPhaseUpdated(ctx context.Context, c client.Client, recorder events.EventRecorder, newResource ctrl.Object,
+func notifyIfPhaseUpdated(recorder events.EventRecorder, newResource ctrl.Object,
 	oldPhase, newPhase string, resourceType, name, reason, info string) {
 	if oldPhase == newPhase {
 		return

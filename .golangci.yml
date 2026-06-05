@@ -41,6 +41,8 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - gomodguard
+    - mnd
   settings:
     goconst:
       min-len: 4
@@ -49,18 +51,6 @@ linters:
       numbers: false
     lll:
       line-length: 170
-    mnd:
-      checks:
-        - argument
-        - case
-        - operation
-        - return
-        - assign
-      ignored-functions:
-        - ^len\.
-        - ^strings\.SplitN$
-        - ^matchOrEmpty$
-        - ^make$
 formatters:
   enable:
     - gofmt

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -74,7 +75,7 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 		}
 
 		if isPodReady && inspect {
-			inspectPod(httpClient, &pod, &podInfo, podIp, observabilityPort, cpuLimit)
+			inspectPod(ctx, httpClient, &pod, &podInfo, podIp, observabilityPort, cpuLimit)
 		}
 
 		podsInfo = append(podsInfo, podInfo)
@@ -84,16 +85,17 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 }
 
 // inspectPod scan a ready Pod and scrape health and metrics which it stores on podInfo resource.
-func inspectPod(httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodInfo, podIp string, observabilityPort int, cpuLimit *string) {
+func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodInfo, podIp string, observabilityPort int, cpuLimit *string) {
 	podInfo.ObservabilityService = &v1alpha1.ObservabilityServiceInfo{}
-	err := setHealth(podInfo, podIp, observabilityPort)
+
+	err := setHealth(ctx, httpClient, podInfo, podIp, observabilityPort)
 	if err != nil {
 		reason := "Could not scrape health endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
 
-	err = setMetrics(httpClient, podInfo, podIp, observabilityPort)
+	err = setMetrics(ctx, httpClient, podInfo, podIp, observabilityPort)
 	if err != nil {
 		reason := "Could not scrape metrics endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
@@ -111,6 +113,7 @@ func inspectPod(httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodIn
 	}
 }
 
+//nolint:nestif
 func setCPUPressure(podInfo *v1alpha1.PodInfo, cpuLimit *string) error {
 	if cpuLimit != nil && *cpuLimit != "" {
 		podInfo.ProcessCPUMax = cpuLimit
@@ -122,12 +125,12 @@ func setCPUPressure(podInfo *v1alpha1.PodInfo, cpuLimit *string) error {
 				return err1
 			}
 
-			max, err2 := strconv.ParseFloat(*podInfo.ProcessCPUMax, 64)
+			cpuMax, err2 := strconv.ParseFloat(*podInfo.ProcessCPUMax, 64)
 			if err2 != nil {
 				return err2
 			}
 
-			cpuPerc := val / max * 100
+			cpuPerc := val / cpuMax * 100
 			if cpuPerc >= 90 {
 				podInfo.HasCPUPressure = true
 			}
@@ -154,10 +157,14 @@ func getObservabilityPort(appAnnotations map[string]string) int {
 	return defaultPort
 }
 
-func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
+//nolint:nestif
+func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 	// NOTE: we're not using a proxy as a design choice in order
 	// to have a faster turnaround.
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s:%d/%s", podIp, port, platform.DefaultObservabilityMetrics), nil)
+	hostPort := net.JoinHostPort(podIp, strconv.FormatInt(int64(port), 10))
+
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, platform.DefaultObservabilityMetrics), nil)
 	if err != nil {
 		return err
 	}
@@ -168,7 +175,12 @@ func setMetrics(httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string,
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Error(err, "failed to close response body")
+		}
+	}()
 
 	if resp.StatusCode == http.StatusOK {
 		podInfo.ObservabilityService.MetricsEndpoint = platform.DefaultObservabilityMetrics
@@ -320,14 +332,28 @@ func accept(labelPair []*dto.LabelPair, labelName, labelValue string) bool {
 	return false
 }
 
-func setHealth(podInfo *v1alpha1.PodInfo, podIp string, port int) error {
+func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
 	// NOTE: we're not using a proxy as a design choice in order
 	// to have a faster turnaround.
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d/%s", podIp, port, platform.DefaultObservabilityHealth))
+	hostPort := net.JoinHostPort(podIp, strconv.FormatInt(int64(port), 10))
+
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, platform.DefaultObservabilityHealth), nil)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Error(err, "failed to close response body")
+		}
+	}()
 
 	status := resp.Status
 	// The endpoint reports 503 when the service is down, but still provide the
@@ -364,7 +390,7 @@ func parseHealthStatus(reader io.Reader) (string, error) {
 		return "", errors.New("health endpoint syntax error: missing .status property")
 	}
 
-	return string(status), nil
+	return status, nil
 }
 
 func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) {

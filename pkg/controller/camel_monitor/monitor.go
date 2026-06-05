@@ -59,6 +59,7 @@ func (action *monitorAction) CanHandle(cmon *v1alpha1.CamelMonitor) bool {
 	return true
 }
 
+//nolint:nestif
 func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMonitor) (*v1alpha1.CamelMonitor, error) {
 	action.L.Infof("Monitoring App %s/%s with status %s", cmon.Namespace, cmon.Name, cmon.Status.Phase)
 
@@ -168,6 +169,7 @@ func lookupObject(ctx context.Context, c client.Client, kind, ns string, name st
 		Namespace: ns,
 		Name:      name,
 	}
+
 	err := c.Get(ctx, key, obj)
 	if err != nil && k8serrors.IsNotFound(err) {
 		return nil, nil
@@ -249,12 +251,13 @@ func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval 
 		sliExchangeSuccessRate.SamplingIntervalFailed = failedLastInterval
 	}
 
-	if failureRate > float64(sliWarnPerc) {
+	switch {
+	case failureRate > float64(sliWarnPerc):
 		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusError
-	} else if failureRate > float64(sliErrPerc) {
+	case failureRate > float64(sliErrPerc):
 		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusWarning
-	} else if totalLastInterval > 0 {
-		// We prevent to mark as success when there is no yet exchange
+	case totalLastInterval > 0:
+		// Do not mark as successful until at least one exchange has occurred.
 		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusSuccess
 	}
 

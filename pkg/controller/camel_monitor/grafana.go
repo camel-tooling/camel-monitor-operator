@@ -35,7 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func grafanaCRDExists(ctx context.Context, c client.Client) (bool, error) {
+func grafanaCRDExists(c client.Client) (bool, error) {
 	_, err := c.Discovery().ServerResourcesForGroupVersion("grafana.integreatly.org/v1beta1")
 	if err != nil && k8serrors.IsNotFound(err) {
 		return false, nil

@@ -43,12 +43,12 @@ import (
 var actions = []Action{}
 
 func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
-	hasPrometheusAPI, err := prometheusCRDExists(ctx, c)
+	hasPrometheusAPI, err := prometheusCRDExists(c)
 	if err != nil {
 		return err
 	}
 
-	hasGrafanaDashboardAPI, err := grafanaCRDExists(ctx, c)
+	hasGrafanaDashboardAPI, err := grafanaCRDExists(c)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,9 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 	rlog := Log.WithValues("request-namespace", request.Namespace, "request-name", request.Name)
 
 	var instance v1alpha1.CamelMonitor
-	if err := r.client.Get(ctx, request.NamespacedName, &instance); err != nil {
+
+	err := r.client.Get(ctx, request.NamespacedName, &instance)
+	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -137,10 +139,8 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 		}
 	}
 
-	var err error
-
 	target := instance.DeepCopy()
-	targetLog := rlog.ForApp(target)
+	targetLog := rlog.ForCamelMonitor(target)
 
 	for _, a := range actions {
 		a.InjectClient(r.client)
@@ -154,7 +154,7 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 
 		target, err = a.Handle(ctx, target)
 		if err != nil {
-			event.NotifyAppError(ctx, r.client, r.recorder, &instance, target, err)
+			event.NotifyAppError(r.recorder, &instance, target, err)
 
 			if target != nil {
 				_ = r.update(ctx, &instance, target, &targetLog)
@@ -166,13 +166,13 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 		if target != nil {
 			err := r.update(ctx, &instance, target, &targetLog)
 			if err != nil {
-				event.NotifyAppError(ctx, r.client, r.recorder, &instance, target, err)
+				event.NotifyAppError(r.recorder, &instance, target, err)
 
 				return reconcile.Result{}, err
 			}
 		}
 
-		event.NotifyAppUpdated(ctx, r.client, r.recorder, &instance, target)
+		event.NotifyAppUpdated(r.recorder, &instance, target)
 	}
 
 	return reconcile.Result{RequeueAfter: getPollingInterval(target)}, nil
@@ -181,7 +181,7 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 func (r *reconcileApp) update(ctx context.Context, base *v1alpha1.CamelMonitor, target *v1alpha1.CamelMonitor, log *log.Logger) error {
 	err := r.client.Status().Patch(ctx, target, ctrl.MergeFrom(base))
 	if err != nil {
-		event.NotifyAppError(ctx, r.client, r.recorder, base, target, err)
+		event.NotifyAppError(r.recorder, base, target, err)
 
 		return err
 	}

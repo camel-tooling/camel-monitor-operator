@@ -60,8 +60,13 @@ func TestAllPodsUp(t *testing.T) {
 }
 
 func TestSetHealthHttpError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
 	podInfo := &v1alpha1.PodInfo{}
-	err := setHealth(podInfo, "127.0.0.1", 0)
+	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", 0)
 	require.Error(t, err)
 }
 
@@ -82,7 +87,7 @@ func TestSetHealthStatusOK(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -106,7 +111,7 @@ func TestSetHealthStatus503(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	require.Equal(t, "Degraded", podInfo.Runtime.Status)
@@ -129,7 +134,7 @@ func TestSetHealthStatusNotFound(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	require.Equal(t, "404 Not Found", podInfo.Runtime.Status)
@@ -175,7 +180,7 @@ camel_exchanges_last_timestamp 123456
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(*server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
@@ -208,7 +213,7 @@ func TestSetMetricsStatusNotOK(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(*server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "HTTP status not OK")
 }
@@ -278,7 +283,7 @@ func TestInspectPods(t *testing.T) {
 	}
 	// Use localhost with a wrong port to simulate failure
 	badPort := -1
-	inspectPod(httpClient, pod, podInfo, "127.0.0.1", badPort, nil)
+	inspectPod(t.Context(), httpClient, pod, podInfo, "127.0.0.1", badPort, nil)
 
 	assert.NotNil(t, podInfo.ObservabilityService)
 	assert.False(t, podInfo.Ready)
@@ -382,7 +387,7 @@ jvm_memory_used_bytes{area="nonheap",id="Metaspace"} 5.7801568E7
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(*server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	assert.Equal(t, "14", *podInfo.ProcessCPUUsed)
@@ -426,7 +431,7 @@ jvm_memory_used_bytes{area="heap",id="G1 Survivor Space"} 2081872.0
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(*server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 
 	assert.True(t, podInfo.HasMemoryPressure)
@@ -457,7 +462,7 @@ process_cpu_usage 0.1
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(*server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
 	require.NoError(t, err)
 	// value is in millicores
 	err = setCPUPressure(podInfo, ptr.To("500"))

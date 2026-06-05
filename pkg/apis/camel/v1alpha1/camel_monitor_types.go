@@ -26,7 +26,7 @@ import (
 const (
 	// AppKind --.
 	AppKind string = "CamelMonitor"
-	// PodStatusOK --.
+	// PodStatusUP --.
 	PodStatusUP string = "UP"
 )
 

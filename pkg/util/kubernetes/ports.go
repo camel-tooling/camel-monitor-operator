@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Indicate if the pod exposes a port named jolokia.
+// JolokiaEnabled indicates if the pod exposes a port named jolokia.
 func JolokiaEnabled(pod corev1.Pod) bool {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {

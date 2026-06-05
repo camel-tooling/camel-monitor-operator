@@ -71,6 +71,7 @@ func (app *nonManagedCamelCronjob) GetAppPhase(ctx context.Context, c client.Cli
 // GetReplicas returns the number of desired replicas for the backing Camel application.
 func (app *nonManagedCamelCronjob) GetReplicas() *int32 {
 	// In the case of a CronJob we use the number of active jobs instead.
+	//nolint:gosec
 	return new(int32(len(app.cron.Status.Active)))
 }
 
@@ -98,6 +99,8 @@ func (app *nonManagedCamelCronjob) GetMatchLabelsSelector() map[string]string {
 }
 
 // SetMonitoringCondition sets the health and monitoring conditions on the target app.
+//
+//nolint:nestif
 func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) {
 	monitorCondition := metav1.ConditionFalse
 	monitorMessage := "No scheduled job has run yet"

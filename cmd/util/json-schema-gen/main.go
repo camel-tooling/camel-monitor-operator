@@ -108,6 +108,7 @@ func generate(crdFilename, dslFilename, path string, isArray bool, destination s
 		return err
 	}
 
+	//nolint:gosec // the destination is already cleaned and it is controlled by user anyway
 	return os.WriteFile(destination, result, io.FilePerm600)
 }
 
@@ -145,7 +146,9 @@ func loadDslSchema(filename string) (map[string]any, error) {
 	}
 
 	var dslSchema map[string]any
-	if err := json.Unmarshal(bytes, &dslSchema); err != nil {
+
+	err = json.Unmarshal(bytes, &dslSchema)
+	if err != nil {
 		return nil, err
 	}
 

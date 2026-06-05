@@ -87,18 +87,16 @@ func onAdd(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
 	appName := ctrlObj.GetLabels()[platform.GetMonitorLabelSelector()]
 
 	existingApp, err := getSyntheticCamelMonitor(ctx, c, ctrlObj.GetNamespace(), appName)
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			createMonitor(ctx, c, ctrlObj, appName, "")
-		} else {
-			log.Errorf(err, "Some error happened while loading a Camel Monitor %s", appName)
-		}
-	} else if existingApp.Annotations[v1alpha1.MonitorImportedNameLabel] != ctrlObj.GetName() {
+	switch {
+	case err != nil && k8serrors.IsNotFound(err):
+		createMonitor(ctx, c, ctrlObj, appName, "")
+	case err != nil:
+		log.Errorf(err, "Some error happened while loading a Camel Monitor %s", appName)
+	case existingApp.Annotations[v1alpha1.MonitorImportedNameLabel] != ctrlObj.GetName():
 		log.Infof("A Camel Monitor named %s was already created. Creating a new revision.", appName)
 		createMonitor(ctx, c, ctrlObj, appName, "-"+ctrlObj.GetName())
-	} else {
-		// Do nothing, the app was already imported
-		log.Infof("Resource %s has already a CamelMonitor associated.", ctrlObj.GetName())
+	default:
+		log.Infof("Resource %s already has a CamelMonitor associated.", ctrlObj.GetName())
 	}
 }
 
@@ -111,7 +109,9 @@ func createMonitor(ctx context.Context, c client.Client, ctrlObj ctrl.Object, ap
 	}
 
 	app := adapter.CamelMonitor(ctx, c)
-	if err = createSyntheticCamelMonitor(ctx, c, app, suffix); err != nil {
+
+	err = createSyntheticCamelMonitor(ctx, c, app, suffix)
+	if err != nil {
 		log.Errorf(err, "Some error happened while creating a Camel Monitor %s", appName)
 
 		return
@@ -142,7 +142,8 @@ func getInformers(ctx context.Context, cl client.Client, c cache.Cache) ([]cache
 
 	informers := []cache.Informer{deploy}
 	// Watch for the CronJob conditionally
-	if ok, err := kubernetes.IsAPIResourceInstalled(cl, batchv1.SchemeGroupVersion.String(), reflect.TypeFor[batchv1.CronJob]().Name()); ok && err == nil {
+	ok, err := kubernetes.IsAPIResourceInstalled(cl, batchv1.SchemeGroupVersion.String(), reflect.TypeFor[batchv1.CronJob]().Name())
+	if ok && err == nil {
 		cron, err := c.GetInformer(ctx, &batchv1.CronJob{})
 		if err != nil {
 			return nil, err
