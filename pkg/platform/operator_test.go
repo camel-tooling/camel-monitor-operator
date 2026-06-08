@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,4 +95,115 @@ func TestSLIThresholds(t *testing.T) {
 
 	t.Setenv(SLIExchangeWarningPercentage, "15")
 	assert.Equal(t, 15, GetSLIExchangeWarningThreshold())
+}
+
+func TestGetCreatePrometheusPodMonitor(t *testing.T) {
+	t.Setenv(createPrometheusPodMonitorEnvVariable, "true")
+
+	assert.Equal(t, "true", GetCreatePrometheusPodMonitor())
+}
+
+func TestGetCreatePrometheusRuleAlerts(t *testing.T) {
+	t.Setenv(createPrometheusRulesEnvVariable, "true")
+
+	assert.Equal(t, "true", GetCreatePrometheusRuleAlerts())
+}
+
+func TestGetCreateGrafanaDashboard(t *testing.T) {
+	t.Setenv(createGrafanaDashboardEnvVariable, "true")
+
+	assert.Equal(t, "true", GetCreateGrafanaDashboard())
+}
+
+func TestGetOperatorLockName(t *testing.T) {
+	assert.Equal(t, "camel-lock", GetOperatorLockName("camel"))
+}
+
+func TestGetMonitorLabelSelector(t *testing.T) {
+	t.Run("returns env value", func(t *testing.T) {
+		t.Setenv(CamelMonitorLabelSelector, "custom-selector")
+
+		assert.Equal(t, "custom-selector", GetMonitorLabelSelector())
+	})
+
+	t.Run("falls back to default", func(t *testing.T) {
+		t.Setenv(CamelMonitorLabelSelector, "")
+
+		assert.Equal(t, v1alpha1.MonitorLabel, GetMonitorLabelSelector())
+	})
+}
+
+func TestGetLabelFromEnvVar(t *testing.T) {
+	t.Run("valid label", func(t *testing.T) {
+		env := "TEST_LABEL"
+
+		t.Setenv(env, "team=camel")
+
+		labels := getLabelFromEnvVar(env, map[string]string{})
+
+		assert.Equal(t, map[string]string{
+			"team": "camel",
+		}, labels)
+	})
+
+	t.Run("invalid label format", func(t *testing.T) {
+		env := "TEST_LABEL"
+
+		t.Setenv(env, "invalid")
+
+		labels := getLabelFromEnvVar(env, map[string]string{
+			"existing": "value",
+		})
+
+		assert.Equal(t, map[string]string{
+			"existing": "value",
+		}, labels)
+	})
+
+	t.Run("env not set", func(t *testing.T) {
+		labels := getLabelFromEnvVar(
+			"NON_EXISTING_ENV",
+			map[string]string{"a": "b"},
+		)
+
+		assert.Equal(t, map[string]string{"a": "b"}, labels)
+	})
+}
+
+func TestGetGrafanaDatasource(t *testing.T) {
+	t.Run("env value", func(t *testing.T) {
+		t.Setenv(GrafanaDatasourceEnvVariable, "thanos")
+
+		assert.Equal(t, "thanos", GetGrafanaDatasource())
+	})
+
+	t.Run("default", func(t *testing.T) {
+		t.Setenv(GrafanaDatasourceEnvVariable, "")
+
+		assert.Equal(t, defaultGrafanaDatasource, GetGrafanaDatasource())
+	})
+}
+
+func TestGetPrometheusRuleLabels(t *testing.T) {
+	t.Setenv(PrometheusRuleLabelEnvVariable, "team=camel")
+
+	labels := GetPrometheusRuleLabels()
+
+	assert.Equal(t, "camel", labels["team"])
+}
+
+func TestGetPrometheusLabels(t *testing.T) {
+	t.Setenv(PrometheusLabelEnvVariable, "team=camel")
+
+	labels := GetPrometheusLabels()
+
+	assert.Equal(t, "camel", labels["team"])
+}
+
+func TestGetGrafanaLabels(t *testing.T) {
+	t.Setenv(GrafanaLabelEnvVariable, "team=camel")
+
+	labels := GetGrafanaLabels()
+
+	assert.Equal(t, "camel", labels["team"])
 }
