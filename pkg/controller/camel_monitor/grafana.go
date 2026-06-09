@@ -36,14 +36,11 @@ import (
 )
 
 func grafanaCRDExists(c client.Client) (bool, error) {
-	_, err := c.Discovery().ServerResourcesForGroupVersion("grafana.integreatly.org/v1beta1")
-	if err != nil && k8serrors.IsNotFound(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	return true, nil
+	return kubernetes.IsAPIResourceInstalled(
+		c,
+		"grafana.integreatly.org/v1beta1",
+		"Grafana",
+	)
 }
 
 // addGrafanaDashboard will include a GrafanaDashboard resource bound to the CamelMonitor resource.

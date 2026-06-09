@@ -18,25 +18,31 @@ limitations under the License.
 package kubernetes
 
 import (
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/kubernetes"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func IsAPIResourceInstalled(c kubernetes.Interface, groupVersion string, kind string) (bool, error) {
-	resources, err := c.Discovery().ServerResourcesForGroupVersion(groupVersion)
+func IsAPIResourceInstalled(c client.Client, groupVersion string, kind string) (bool, error) {
+	gv, err := schema.ParseGroupVersion(groupVersion)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
+		return false, err
+	}
+
+	_, err = c.RESTMapper().RESTMapping(
+		schema.GroupKind{
+			Group: gv.Group,
+			Kind:  kind,
+		},
+		gv.Version,
+	)
+	if err != nil {
+		if meta.IsNoMatchError(err) {
 			return false, nil
 		}
 
 		return false, err
 	}
 
-	for _, resource := range resources.APIResources {
-		if resource.Kind == kind {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return true, nil
 }

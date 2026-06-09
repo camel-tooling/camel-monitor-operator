@@ -28,10 +28,9 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
-	camel "github.com/camel-tooling/camel-monitor-operator/pkg/client/camel/clientset/versioned"
-	"github.com/camel-tooling/camel-monitor-operator/pkg/client/camel/clientset/versioned/scheme"
 	integreatlyv1beta1 "github.com/grafana/grafana-operator/v5/api/v1beta1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/internalversion/scheme"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -89,16 +88,6 @@ func NewClientWithConfig(cfg *rest.Config) (client.Client, error) {
 		}
 	}
 
-	var clientset kubernetes.Interface
-	if clientset, err = kubernetes.NewForConfig(cfg); err != nil {
-		return nil, err
-	}
-
-	var camelClientset camel.Interface
-	if camelClientset, err = camel.NewForConfig(cfg); err != nil {
-		return nil, err
-	}
-
 	// Create a new client to avoid using cache (enabled by default with controller-runtime client)
 	clientOptions := ctrl.Options{
 		Scheme: clientScheme,
@@ -109,8 +98,6 @@ func NewClientWithConfig(cfg *rest.Config) (client.Client, error) {
 	}
 
 	return &client.DefaultClient{
-		Client:    dynClient,
-		Interface: clientset,
-		Camel:     camelClientset,
+		Client: dynClient,
 	}, nil
 }

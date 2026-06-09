@@ -20,12 +20,13 @@ package kubernetes
 import (
 	"testing"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 func TestIsAPIResourceInstalled(t *testing.T) {
-	client := fake.NewClientset()
+	client, err := internal.NewFakeClient()
+	require.NoError(t, err)
 
 	exists, err := IsAPIResourceInstalled(client, "apps/v1", "Deployment")
 	require.NoError(t, err)

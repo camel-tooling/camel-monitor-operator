@@ -26,12 +26,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Dump prints all information about the given namespace to debug errors
@@ -40,12 +41,17 @@ func Dump(ctx context.Context, c *kubernetes.Clientset, ns string, t *testing.T)
 
 	// CamelMonitors
 	cli := *CamelMonitorClient(t)
-	camelMonitor, err := cli.CamelV1alpha1().CamelMonitors(ns).List(ctx, v1.ListOptions{})
+	camelMonitors := &v1alpha1.CamelMonitorList{}
+	err := cli.List(
+		ctx,
+		camelMonitors,
+		client.InNamespace(ns),
+	)
 	if err != nil {
 		return err
 	}
-	t.Logf("Found %d Camel Monitors:\n", len(camelMonitor.Items))
-	for _, cmon := range camelMonitor.Items {
+	t.Logf("Found %d Camel Monitors:\n", len(camelMonitors.Items))
+	for _, cmon := range camelMonitors.Items {
 		ref := cmon
 		data, err := toYAMLNoManagedFields(&ref)
 		if err != nil {

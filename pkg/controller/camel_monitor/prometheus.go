@@ -25,6 +25,7 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util/kubernetes"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -122,12 +123,10 @@ func replacePodMonitor(ctx context.Context, c client.Client, pm *monitoringv1.Po
 }
 
 func prometheusCRDExists(c client.Client) (bool, error) {
-	_, err := c.Discovery().ServerResourcesForGroupVersion("monitoring.coreos.com/v1")
-	if err != nil && k8serrors.IsNotFound(err) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
+	return kubernetes.IsAPIResourceInstalled(
+		c,
+		"monitoring.coreos.com/v1",
+		"Prometheus",
+	)
 
-	return true, nil
 }

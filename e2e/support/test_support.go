@@ -42,7 +42,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
@@ -216,7 +215,15 @@ func PodStatusPhase(t *testing.T, ctx context.Context, ns string, labelSelector 
 func CamelMonitor(t *testing.T, ctx context.Context, ns string, appName string) func() (*v1alpha1.CamelMonitor, error) {
 	return func() (*v1alpha1.CamelMonitor, error) {
 		cli := *CamelMonitorClient(t)
-		cmon, err := cli.CamelV1alpha1().CamelMonitors(ns).Get(ctx, appName, v1.GetOptions{})
+		cmon := &v1alpha1.CamelMonitor{}
+		err := cli.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: ns,
+				Name:      appName,
+			},
+			cmon,
+		)
 		if err != nil {
 			if k8serrors.IsNotFound(err) {
 				return nil, nil
@@ -244,12 +251,17 @@ func CamelMonitorStatus(t *testing.T, ctx context.Context, ns string, appName st
 func CamelMonitors(t *testing.T, ctx context.Context, ns string) func() ([]v1alpha1.CamelMonitor, error) {
 	return func() ([]v1alpha1.CamelMonitor, error) {
 		cli := *CamelMonitorClient(t)
-		cmonList, err := cli.CamelV1alpha1().CamelMonitors(ns).List(ctx, v1.ListOptions{})
+		camelMonitors := &v1alpha1.CamelMonitorList{}
+		err := cli.List(
+			ctx,
+			camelMonitors,
+			ctrl.InNamespace(ns),
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		return cmonList.Items, nil
+		return camelMonitors.Items, nil
 	}
 }
 
