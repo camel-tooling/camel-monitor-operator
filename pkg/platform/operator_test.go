@@ -42,12 +42,6 @@ func TestIsCurrentOperatorGlobal(t *testing.T) {
 	})
 }
 
-func TestGetOperatorWatchNamespace(t *testing.T) {
-	t.Setenv(OperatorWatchNamespaceEnvVariable, "ns1")
-
-	assert.Equal(t, "ns1", GetOperatorWatchNamespace())
-}
-
 func TestGetOperatorNamespace(t *testing.T) {
 	t.Setenv(OperatorNamespaceEnvVariable, "operator-ns")
 

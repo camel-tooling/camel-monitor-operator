@@ -128,5 +128,4 @@ func prometheusCRDExists(c client.Client) (bool, error) {
 		"monitoring.coreos.com/v1",
 		"Prometheus",
 	)
-
 }
