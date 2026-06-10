@@ -86,7 +86,7 @@ jobs:
       run: |
         kubectl create ns operators
         kubectl create ns tenant-a
-        kubectl apply -k install/overlays/kubernetes/single-namespace/ --server-side
+        kubectl apply -k install/overlays/single-namespace/ --server-side
         kubectl wait --for=condition=available deployment/camel-monitor-operator-tenant-a --timeout=120s -n operators
 
     - name: Run test
@@ -112,7 +112,7 @@ jobs:
         kubectl create ns operators
         kubectl create ns tenant-a
         kubectl create ns tenant-b
-        kubectl apply -k install/overlays/kubernetes/multi-namespace/ --server-side
+        kubectl apply -k install/overlays/multi-namespace/ --server-side
         kubectl wait --for=condition=available deployment/camel-monitor-operator-tenant-ab --timeout=120s -n operators
 
     - name: Run test
