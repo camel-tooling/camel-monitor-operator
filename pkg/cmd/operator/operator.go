@@ -149,9 +149,11 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	selector := cache.ByObject{
 		Label: labelsSelector,
 	}
+
 	cacheWatchNamespace := getNamespacesSelector(watchNamespace)
 	if !platform.IsCurrentOperatorGlobal() {
 		log.Infof("This operator will watch only %s namespace", watchNamespace)
+
 		selector = cache.ByObject{
 			Label:      labelsSelector,
 			Namespaces: cacheWatchNamespace,
@@ -215,7 +217,7 @@ func getLabelSelector() labels.Selector {
 
 func getNamespacesSelector(watchNamespace string) map[string]cache.Config {
 	namespacesSelector := map[string]cache.Config{
-		watchNamespace: cache.Config{},
+		watchNamespace: {},
 	}
 
 	return namespacesSelector
