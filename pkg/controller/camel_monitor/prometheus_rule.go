@@ -31,7 +31,7 @@ import (
 )
 
 // addPrometheusRule will include a PrometeusRule resource setting certain alerts which works for all Camel applications.
-func addPrometheusRuleAlerts(ctx context.Context, c client.Client) error {
+func addPrometheusRuleAlerts(ctx context.Context, c client.Client, namespace string) error {
 	// TODO, we may add ownership references to let it be garbaged collected.
 	// It could be the same operator Pod if needed.
 	prometheusRule := monitoringv1.PrometheusRule{
@@ -41,7 +41,7 @@ func addPrometheusRuleAlerts(ctx context.Context, c client.Client) error {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "camel-monitor-alerts",
-			Namespace: platform.GetOperatorNamespace(),
+			Namespace: namespace,
 			// We use the default one for installation
 			Labels: platform.GetPrometheusRuleLabels(),
 		},

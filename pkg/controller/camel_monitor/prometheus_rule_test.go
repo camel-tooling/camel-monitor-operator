@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
-	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,17 +29,16 @@ import (
 )
 
 func TestAddPrometheusRule_Success(t *testing.T) {
-	t.Setenv(platform.OperatorNamespaceEnvVariable, "op-ns")
 	fakeClient, err := internal.NewFakeClient()
 	require.NoError(t, err)
 
-	err = addPrometheusRuleAlerts(context.TODO(), fakeClient)
+	err = addPrometheusRuleAlerts(context.TODO(), fakeClient, "my-ns")
 	require.NoError(t, err)
 
 	pr := &monitoringv1.PrometheusRule{}
 	err = fakeClient.Get(context.TODO(), ctrl.ObjectKey{
 		Name:      "camel-monitor-alerts",
-		Namespace: "op-ns",
+		Namespace: "my-ns",
 	}, pr)
 
 	require.NoError(t, err)

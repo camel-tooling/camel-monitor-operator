@@ -130,12 +130,12 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 		}
 		// when we initialize, we create the PrometheusRule alert as well.
 		if r.hasPrometheusCRDs && platform.GetCreatePrometheusRuleAlerts() == "true" {
-			err := addPrometheusRuleAlerts(ctx, r.client)
+			err := addPrometheusRuleAlerts(ctx, r.client, request.Namespace)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
 
-			log.Info("Added a generic alert PrometheusRule")
+			log.Infof("Added a generic alert PrometheusRule in %s namespace", request.Namespace)
 		}
 	}
 

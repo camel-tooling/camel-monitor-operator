@@ -65,12 +65,8 @@ var defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "
 // IsCurrentOperatorGlobal returns true if the operator is configured to watch all namespaces.
 func IsCurrentOperatorGlobal() bool {
 	if watchNamespace, envSet := os.LookupEnv(OperatorWatchNamespaceEnvVariable); !envSet || strings.TrimSpace(watchNamespace) == "" {
-		log.Debug("Operator is global to all namespaces")
-
 		return true
 	}
-
-	log.Debug("Operator is local to namespace")
 
 	return false
 }

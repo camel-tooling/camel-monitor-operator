@@ -149,11 +149,15 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	selector := cache.ByObject{
 		Label: labelsSelector,
 	}
+	cacheWatchNamespace := getNamespacesSelector(watchNamespace)
 	if !platform.IsCurrentOperatorGlobal() {
+		log.Infof("This operator will watch only %s namespace", watchNamespace)
 		selector = cache.ByObject{
 			Label:      labelsSelector,
-			Namespaces: getNamespacesSelector(operatorNamespace, watchNamespace),
+			Namespaces: cacheWatchNamespace,
 		}
+	} else {
+		log.Info("This operator is marked as global and will watch all namespaces!")
 	}
 
 	selectors := map[ctrl.Object]cache.ByObject{
@@ -165,7 +169,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 		ByObject: selectors,
 	}
 	if !platform.IsCurrentOperatorGlobal() {
-		options.DefaultNamespaces = getNamespacesSelector(operatorNamespace, watchNamespace)
+		options.DefaultNamespaces = cacheWatchNamespace
 	}
 
 	mgr, err := manager.New(cfg, manager.Options{
@@ -209,12 +213,9 @@ func getLabelSelector() labels.Selector {
 	return labelsSelector
 }
 
-func getNamespacesSelector(operatorNamespace string, watchNamespace string) map[string]cache.Config {
+func getNamespacesSelector(watchNamespace string) map[string]cache.Config {
 	namespacesSelector := map[string]cache.Config{
-		operatorNamespace: {},
-	}
-	if operatorNamespace != watchNamespace {
-		namespacesSelector[watchNamespace] = cache.Config{}
+		watchNamespace: cache.Config{},
 	}
 
 	return namespacesSelector
