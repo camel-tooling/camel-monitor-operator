@@ -144,19 +144,20 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 		log.Info("Leader election is disabled!")
 	}
 
-	labelsSelector := getLabelSelector()
+	labelsSelector, err := getLabelSelector()
+	exitOnError(err, "cannot create App label selector")
 
 	selector := cache.ByObject{
 		Label: labelsSelector,
 	}
 
-	cacheWatchNamespace := getNamespacesSelector(watchNamespace)
+	cacheWatchNamespaces := getNamespacesSelector(watchNamespace)
 	if !platform.IsCurrentOperatorGlobal() {
-		log.Infof("This operator will watch only %s namespace", watchNamespace)
+		log.Infof("This operator will watch only %s namespace(s)", watchNamespace)
 
 		selector = cache.ByObject{
 			Label:      labelsSelector,
-			Namespaces: cacheWatchNamespace,
+			Namespaces: cacheWatchNamespaces,
 		}
 	} else {
 		log.Info("This operator is marked as global and will watch all namespaces!")
@@ -171,7 +172,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 		ByObject: selectors,
 	}
 	if !platform.IsCurrentOperatorGlobal() {
-		options.DefaultNamespaces = cacheWatchNamespace
+		options.DefaultNamespaces = cacheWatchNamespaces
 	}
 
 	mgr, err := manager.New(cfg, manager.Options{
@@ -199,7 +200,7 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	exitOnError(mgr.Start(ctx), "manager exited non-zero")
 }
 
-func getLabelSelector() labels.Selector {
+func getLabelSelector() (labels.Selector, error) {
 	labelSelector := platform.GetMonitorLabelSelector()
 	log.Infof("Using (%s) label selector to identify Camel applications on the cluster.", labelSelector)
 
@@ -208,16 +209,25 @@ func getLabelSelector() labels.Selector {
 	}
 
 	hasAppLabel, err := labels.NewRequirement(labelSelector, selection.Exists, []string{})
-	exitOnError(err, "cannot create App label selector")
+	if err != nil {
+		return nil, err
+	}
 
 	labelsSelector := labels.NewSelector().Add(*hasAppLabel)
 
-	return labelsSelector
+	return labelsSelector, nil
 }
 
-func getNamespacesSelector(watchNamespace string) map[string]cache.Config {
-	namespacesSelector := map[string]cache.Config{
-		watchNamespace: {},
+func getNamespacesSelector(watchNamespaces string) map[string]cache.Config {
+	namespacesSelector := make(map[string]cache.Config)
+
+	for ns := range strings.SplitSeq(watchNamespaces, ",") {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+
+		namespacesSelector[ns] = cache.Config{}
 	}
 
 	return namespacesSelector

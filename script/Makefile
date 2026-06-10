@@ -209,14 +209,19 @@ test-install-olm:
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 20m -v ./e2e/install/olm -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-namespaced:
+test-install-own-namespace:
 	FAILED=0; \
-	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/namespaced/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/own-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-other-namespace:
+test-install-single-namespace:
 	FAILED=0; \
-	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/other-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/single-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
+test-install-multi-namespace:
+	FAILED=0; \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/multi-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
 build-camel-monitor:
@@ -578,7 +583,7 @@ install-k8s-global: KUSTOMIZE_DIR="install/overlays/kubernetes/descoped"
 install-k8s-global: clone-kustomize-dir set-operator-id set-operator-env install-operator
 
 install-k8s-ns: DEFAULT_NS="default"
-install-k8s-ns: KUSTOMIZE_DIR="install/overlays/kubernetes/namespaced"
+install-k8s-ns: KUSTOMIZE_DIR="install/overlays/kubernetes/own-namespace"
 install-k8s-ns: clone-kustomize-dir set-operator-id set-operator-env install-operator
 
 uninstall:

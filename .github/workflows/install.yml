@@ -52,7 +52,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  namespaced:
+  own-namespace:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -67,9 +67,9 @@ jobs:
     - name: Run test
       shell: bash
       run: |
-        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-namespaced
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-own-namespace
 
-  other-namespace:
+  single-namespace:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -86,10 +86,36 @@ jobs:
       run: |
         kubectl create ns operators
         kubectl create ns tenant-a
-        kubectl apply -k install/overlays/kubernetes/multi/ --server-side
+        kubectl apply -k install/overlays/kubernetes/single-namespace/ --server-side
         kubectl wait --for=condition=available deployment/camel-monitor-operator-tenant-a --timeout=120s -n operators
 
     - name: Run test
       shell: bash
       run: |
-        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-other-namespace
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-single-namespace
+
+  multi-namespace:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        submodules: recursive
+
+    - name: Infra setting
+      uses: ./.github/actions/infra-setting
+
+    - name: Install operators and tenant namespaces
+      shell: bash
+      run: |
+        kubectl create ns operators
+        kubectl create ns tenant-a
+        kubectl create ns tenant-b
+        kubectl apply -k install/overlays/kubernetes/multi-namespace/ --server-side
+        kubectl wait --for=condition=available deployment/camel-monitor-operator-tenant-ab --timeout=120s -n operators
+
+    - name: Run test
+      shell: bash
+      run: |
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-multi-namespace
