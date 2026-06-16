@@ -19,6 +19,7 @@ name: knative
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  CAMEL_K_VERSION: 2.10.1
 
 on:
   pull_request:
@@ -82,7 +83,7 @@ jobs:
       shell: bash
       run: |
         kubectl create ns camel-k
-        kubectl apply -k github.com/apache/camel-k/install/overlays/kubernetes/descoped?ref=v2.9.1 --server-side
+        kubectl apply -k github.com/apache/camel-k/install/overlays/kubernetes/descoped?ref=v$CAMEL_K_VERSION --server-side
         kubectl wait --for=condition=available deployment/camel-k-operator --timeout=180s -n camel-k
         REGISTRY=$(kubectl -n kube-system get service registry -o jsonpath='{.spec.clusterIP}')
         sed -i "s/REPLACETHIS/$REGISTRY/g" ./.github/actions/infra-setting/default-itp.yaml

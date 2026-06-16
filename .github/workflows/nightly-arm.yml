@@ -1,3 +1,5 @@
+--- # ---------------------------------------------------------------------------
+
 # ---------------------------------------------------------------------------
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -15,62 +17,37 @@
 # limitations under the License.
 # ---------------------------------------------------------------------------
 
-name: prometheus
+name: Nightly check against ARM64 architecture
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CAMEL_K_VERSION: 2.10.1
 
 on:
-  pull_request:
-    branches:
-      - main
-      - "release-*"
-    paths-ignore:
-      - 'docs/**'
-      - 'proposals/**'
-      - '**.adoc'
-      - '**.md'
-      - 'KEYS'
-      - 'LICENSE'
-      - 'NOTICE'
-  push:
-    branches:
-      - main
-      - "release-*"
-    paths-ignore:
-      - 'docs/**'
-      - 'proposals/**'
-      - '**.adoc'
-      - '**.md'
-      - 'KEYS'
-      - 'LICENSE'
-      - 'NOTICE'
+  schedule:
+    - cron: "10 4 * * *"
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: true
-
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-arm64:
+    strategy:
+      matrix:
+        # We want to check this on latest development branch only
+        ref-branch: [main]
+
+    if: github.repository == 'apache/camel-k'
+    runs-on: ubuntu-24.04-arm
     steps:
 
-    - name: Checkout code
+    - name: "Checkout code"
       uses: actions/checkout@v4
       with:
+        ref: ${{ matrix.ref-branch }}
         persist-credentials: false
         submodules: recursive
 
     - name: Infra setting
       uses: ./.github/actions/infra-setting
-
-    - name: Install Prometheus
-      shell: bash
-      run: |
-        ./e2e/prometheus/files/setup/setup-prometheus.sh
-        ./e2e/prometheus/files/setup/setup-grafana.sh
 
     - name: Install Camel Monitor operator
       shell: bash
@@ -95,4 +72,4 @@ jobs:
     - name: Run test
       shell: bash
       run: |
-        DO_TEST_PREBUILD=false GOTESTFMT="-json 2>&1 | gotestfmt" make test-prometheus
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-common
