@@ -194,6 +194,12 @@ test-common:
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
+# Used for arm64 arch test, as Camel K provides those platform images out of the box
+test-common-ck-only:
+	FAILED=0; \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/integration* --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
 test-knative:
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/knative/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \

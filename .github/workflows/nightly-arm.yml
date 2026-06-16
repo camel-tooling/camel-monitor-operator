@@ -52,7 +52,7 @@ jobs:
     - name: Install Camel Monitor operator
       shell: bash
       run: |
-       sed -i 's#quay\.io/camel-tooling/camel-monitor-operator:[^[:space:]]*#quay.io/camel-tooling/camel-monitor-operator:latest-arm64#g' \
+        sed -i 's#quay\.io/camel-tooling/camel-monitor-operator:[^[:space:]]*#quay.io/camel-tooling/camel-monitor-operator:latest-arm64#g' \
           install/base/config/manager/operator-deployment.yaml
         kubectl create ns camel
         make install-k8s-global
@@ -71,7 +71,8 @@ jobs:
         kubectl wait --for=jsonpath='{.status.phase}'=Ready itp/camel-k -n camel-k --timeout=120s
         kubectl get itp -n camel-k
 
+    # Only run Camel K applications, as the CK operator creates ARM64 images out of the box!
     - name: Run test
       shell: bash
       run: |
-        GOTESTFMT="-json 2>&1 | gotestfmt" make test-common
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-common-ck-only
