@@ -10,7 +10,7 @@ require (
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.68.1
+	github.com/prometheus/common v0.69.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/zap v1.28.0
