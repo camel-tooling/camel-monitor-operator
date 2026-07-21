@@ -3,7 +3,7 @@ module github.com/camel-tooling/camel-monitor-operator
 go 1.26.5
 
 require (
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/uuid v1.6.0
 	github.com/grafana/grafana-operator/v5 v5.24.0
 	github.com/onsi/gomega v1.42.1
