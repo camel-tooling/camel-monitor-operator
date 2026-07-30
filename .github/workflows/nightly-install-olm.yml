@@ -61,7 +61,7 @@ jobs:
     # Building and pushing a bundle to a running container is required due to how
     # Operator-SDK works. Once it allows for local bundle testing, this part may be omitted
     - name: Login to staging container registry
-      uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
       with:
         registry: quay.io
         username: ${{ secrets.QUAY_USERNAME }}
