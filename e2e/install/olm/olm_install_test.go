@@ -188,15 +188,15 @@ func TestOLMSingleInstallation(t *testing.T) {
 		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
 			" container registry and set BUNDLE_IMAGE_NAME env var")
 
-		err := ReplaceInFile(t, "modes/olm-single", "$$BUNDLE_IMAGE$$", bundleImageName)
+		err := ReplaceInFile(t, "modes/olm-single.yaml", "$$BUNDLE_IMAGE$$", bundleImageName)
 		g.Expect(err).NotTo(HaveOccurred())
-		err = ReplaceInFile(t, "modes/olm-single", "$$TARGET_NAMESPACE$$", ns)
+		err = ReplaceInFile(t, "modes/olm-single.yaml", "$$TARGET_NAMESPACE$$", ns)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		ExpectExecSucceed(t, g,
 			exec.Command(
 				"kubectl",
-				strings.Split("apply -f modes/olm-single", " ")...,
+				strings.Split("apply -f modes/olm-single.yaml", " ")...,
 			),
 		)
 		// The Operator is installed in "operators" namespace
@@ -277,17 +277,17 @@ func TestOLMMultiInstallation(t *testing.T) {
 			g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
 				" container registry and set BUNDLE_IMAGE_NAME env var")
 
-			err := ReplaceInFile(t, "modes/olm-multi", "$$BUNDLE_IMAGE$$", bundleImageName)
+			err := ReplaceInFile(t, "modes/olm-multi.yaml", "$$BUNDLE_IMAGE$$", bundleImageName)
 			g.Expect(err).NotTo(HaveOccurred())
-			err = ReplaceInFile(t, "modes/olm-multi", "$$TARGET_NAMESPACE1$$", ns1)
+			err = ReplaceInFile(t, "modes/olm-multi.yaml", "$$TARGET_NAMESPACE1$$", ns1)
 			g.Expect(err).NotTo(HaveOccurred())
-			err = ReplaceInFile(t, "modes/olm-multi", "$$TARGET_NAMESPACE2$$", ns1)
+			err = ReplaceInFile(t, "modes/olm-multi.yaml", "$$TARGET_NAMESPACE2$$", ns1)
 			g.Expect(err).NotTo(HaveOccurred())
 
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
-					strings.Split("apply -f modes/olm-multi", " ")...,
+					strings.Split("apply -f modes/olm-multi.yaml", " ")...,
 				),
 			)
 			// The Operator is installed in "operators" namespace

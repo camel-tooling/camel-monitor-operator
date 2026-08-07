@@ -418,7 +418,8 @@ func getCamelAppVersion() string {
 	return camelAppVersion
 }
 
-func ReplaceInFile(t *testing.T, srcPath, old, new string) error {
+// Return the cloned file replaced location.
+func ReplaceInFile(t *testing.T, srcPath, old, new string) string {
 	t.Helper()
 	tempDir := t.TempDir()
 	tempPath := filepath.Join(tempDir, filepath.Base(srcPath))
@@ -429,7 +430,7 @@ func ReplaceInFile(t *testing.T, srcPath, old, new string) error {
 	}
 	defer dstFile.Close()
 
-	content, err := os.ReadFile(srcPath)
+	content, err := os.ReadFile(tempPath)
 	if err != nil {
 		t.Fatalf("failed to read src file: %v", err)
 	}
@@ -439,5 +440,5 @@ func ReplaceInFile(t *testing.T, srcPath, old, new string) error {
 		t.Fatalf("failed to write dst file: %v", err)
 	}
 
-	return os.WriteFile(srcPath, []byte(updated), 0644)
+	return tempPath
 }
