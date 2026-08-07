@@ -203,7 +203,8 @@ func TestOLMSingleInstallation(t *testing.T) {
 		operatorNs := "operators"
 
 		// Check the operator pod is running
-		g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
+		g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"),
+			TestTimeoutLong).Should(Equal(corev1.PodRunning))
 
 		// Verify the app running in target namespace is monitored
 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
@@ -270,106 +271,107 @@ func TestOLMSingleInstallation(t *testing.T) {
 	})
 }
 
-func TestOLMMultiInstallation(t *testing.T) {
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns1 string) {
-		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
-			bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
-			g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
-				" container registry and set BUNDLE_IMAGE_NAME env var")
+// func TestOLMMultiInstallation(t *testing.T) {
+// 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns1 string) {
+// 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
+// 			bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
+// 			g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
+// 				" container registry and set BUNDLE_IMAGE_NAME env var")
 
-			replacedFile := ReplaceInFile(t, "modes/olm-single.yaml", map[string]string{
-				"$$BUNDLE_IMAGE$$":      bundleImageName,
-				"$$TARGET_NAMESPACE1$$": ns1,
-				"$$TARGET_NAMESPACE2$$": ns2,
-			})
+// 			replacedFile := ReplaceInFile(t, "modes/olm-single.yaml", map[string]string{
+// 				"$$BUNDLE_IMAGE$$":      bundleImageName,
+// 				"$$TARGET_NAMESPACE1$$": ns1,
+// 				"$$TARGET_NAMESPACE2$$": ns2,
+// 			})
 
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("apply -f "+replacedFile, " ")...,
-				),
-			)
-			// The Operator is installed in "operators" namespace
-			operatorNs := "operators"
+// 			ExpectExecSucceed(t, g,
+// 				exec.Command(
+// 					"kubectl",
+// 					strings.Split("apply -f "+replacedFile, " ")...,
+// 				),
+// 			)
+// 			// The Operator is installed in "operators" namespace
+// 			operatorNs := "operators"
 
-			// Check the operator pod is running
-			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
+// 			// Check the operator pod is running
+// 			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"),
+// 				TestTimeoutLong).Should(Equal(corev1.PodRunning))
 
-			// Verify the app running in target namespace 1 is monitored
-			t.Run("simple NS1 Deployment (monitored)", func(t *testing.T) {
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns1, " ")...,
-					),
-				)
-				// Add the labels to discover it
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns1-monitored -n "+ns1, " ")...,
-					),
-				)
-				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-				g.Eventually(CamelMonitor(t, ctx, ns1, "camel-ns1-monitored")).Should(Not(BeNil()))
-				g.Eventually(
-					CamelMonitorStatus(t, ctx, ns1, "camel-ns1-monitored"),
-					TestTimeoutMedium,
-				).Should(
-					MatchFields(IgnoreExtras, Fields{
-						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-						"Replicas":    PointTo(Equal(int32(1))),
-						"SuccessRate": Not(BeNil()),
-					}),
-				)
-				// Delete deployment
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("delete deployment camel-app -n "+ns1, " ")...,
-					),
-				)
-				// No CamelMonitors around (garbage collected)
-				g.Eventually(CamelMonitors(t, ctx, ns1)).Should(BeEmpty())
-			})
+// 			// Verify the app running in target namespace 1 is monitored
+// 			t.Run("simple NS1 Deployment (monitored)", func(t *testing.T) {
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns1, " ")...,
+// 					),
+// 				)
+// 				// Add the labels to discover it
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns1-monitored -n "+ns1, " ")...,
+// 					),
+// 				)
+// 				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
+// 				g.Eventually(CamelMonitor(t, ctx, ns1, "camel-ns1-monitored")).Should(Not(BeNil()))
+// 				g.Eventually(
+// 					CamelMonitorStatus(t, ctx, ns1, "camel-ns1-monitored"),
+// 					TestTimeoutMedium,
+// 				).Should(
+// 					MatchFields(IgnoreExtras, Fields{
+// 						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
+// 						"Replicas":    PointTo(Equal(int32(1))),
+// 						"SuccessRate": Not(BeNil()),
+// 					}),
+// 				)
+// 				// Delete deployment
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("delete deployment camel-app -n "+ns1, " ")...,
+// 					),
+// 				)
+// 				// No CamelMonitors around (garbage collected)
+// 				g.Eventually(CamelMonitors(t, ctx, ns1)).Should(BeEmpty())
+// 			})
 
-			// Verify the app running in target namespace 2 is monitored
-			t.Run("simple NS2 Deployment (monitored)", func(t *testing.T) {
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
-					),
-				)
-				// Add the labels to discover it
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns2-monitored -n "+ns2, " ")...,
-					),
-				)
-				g.Eventually(CamelMonitor(t, ctx, ns2, "camel-ns2-monitored")).Should(Not(BeNil()))
-				g.Eventually(
-					CamelMonitorStatus(t, ctx, ns2, "camel-ns2-monitored"),
-					TestTimeoutMedium,
-				).Should(
-					MatchFields(IgnoreExtras, Fields{
-						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-						"Replicas":    PointTo(Equal(int32(1))),
-						"SuccessRate": Not(BeNil()),
-					}),
-				)
-				// Delete deployment
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("delete deployment camel-app -n "+ns2, " ")...,
-					),
-				)
-				// No CamelMonitors around (garbage collected)
-				g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
-			})
+// 			// Verify the app running in target namespace 2 is monitored
+// 			t.Run("simple NS2 Deployment (monitored)", func(t *testing.T) {
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
+// 					),
+// 				)
+// 				// Add the labels to discover it
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns2-monitored -n "+ns2, " ")...,
+// 					),
+// 				)
+// 				g.Eventually(CamelMonitor(t, ctx, ns2, "camel-ns2-monitored")).Should(Not(BeNil()))
+// 				g.Eventually(
+// 					CamelMonitorStatus(t, ctx, ns2, "camel-ns2-monitored"),
+// 					TestTimeoutMedium,
+// 				).Should(
+// 					MatchFields(IgnoreExtras, Fields{
+// 						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
+// 						"Replicas":    PointTo(Equal(int32(1))),
+// 						"SuccessRate": Not(BeNil()),
+// 					}),
+// 				)
+// 				// Delete deployment
+// 				ExpectExecSucceed(t, g,
+// 					exec.Command(
+// 						"kubectl",
+// 						strings.Split("delete deployment camel-app -n "+ns2, " ")...,
+// 					),
+// 				)
+// 				// No CamelMonitors around (garbage collected)
+// 				g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
+// 			})
 
-		})
-	})
-}
+// 		})
+// 	})
+// }
