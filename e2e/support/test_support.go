@@ -419,22 +419,23 @@ func getCamelAppVersion() string {
 }
 
 // Return the cloned file replaced location.
-func ReplaceInFile(t *testing.T, srcPath, old, new string) string {
+func ReplaceInFile(t *testing.T, srcPath string, vars map[string]string) string {
 	t.Helper()
+
 	tempDir := t.TempDir()
 	tempPath := filepath.Join(tempDir, filepath.Base(srcPath))
 
-	dstFile, err := os.Create(tempPath)
-	if err != nil {
-		t.Fatalf("failed to create temp file: %v", err)
-	}
-	defer dstFile.Close()
-
-	content, err := os.ReadFile(tempPath)
+	content, err := os.ReadFile(srcPath)
 	if err != nil {
 		t.Fatalf("failed to read src file: %v", err)
 	}
-	updated := strings.ReplaceAll(string(content), old, new)
+
+	updated := string(content)
+
+	for old, new := range vars {
+		updated = strings.ReplaceAll(updated, old, new)
+	}
+
 	err = os.WriteFile(tempPath, []byte(updated), 0644)
 	if err != nil {
 		t.Fatalf("failed to write dst file: %v", err)
