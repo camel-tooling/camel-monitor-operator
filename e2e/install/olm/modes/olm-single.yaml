@@ -1,0 +1,34 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: my-catalog
+  namespace: olm
+spec:
+  displayName: My Operator Catalog
+  publisher: Me
+  sourceType: grpc
+  image: $$BUNDLE_IMAGE$$
+  updateStrategy:
+    registryPoll:
+      interval: 10m
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: my-operatorgroup
+  namespace: operators
+spec:
+  targetNamespaces:
+    - $$TARGET_NAMESPACE$$
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: my-operator
+  namespace: operators
+spec:
+  channel: latest
+  installPlanApproval: Automatic
+  name: my-operator
+  source: my-catalog
+  sourceNamespace: olm

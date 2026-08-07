@@ -416,3 +416,14 @@ func getCamelAppVersion() string {
 
 	return camelAppVersion
 }
+
+func ReplaceInFile(filePath, old, new string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	updated := strings.ReplaceAll(string(data), old, new)
+
+	return os.WriteFile(filePath, []byte(updated), 0644)
+}
