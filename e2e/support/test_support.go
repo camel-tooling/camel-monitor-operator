@@ -116,6 +116,7 @@ func invokeUserTestCode(t *testing.T, ctx context.Context, ns string, doRun func
 			// Also dump the operator namespace in case it's common
 			DumpNamespace(t, ctx, "camel-monitor")
 			DumpNamespace(t, ctx, "camel-k")
+			DumpNamespace(t, ctx, "operators")
 		}
 	}()
 
