@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -417,13 +418,26 @@ func getCamelAppVersion() string {
 	return camelAppVersion
 }
 
-func ReplaceInFile(filePath, old, new string) error {
-	data, err := os.ReadFile(filePath)
+func ReplaceInFile(t *testing.T, srcPath, old, new string) error {
+	t.Helper()
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, filepath.Base(srcPath))
+
+	dstFile, err := os.Create(tempPath)
 	if err != nil {
-		return err
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer dstFile.Close()
+
+	content, err := os.ReadFile(srcPath)
+	if err != nil {
+		t.Fatalf("failed to read src file: %v", err)
+	}
+	updated := strings.ReplaceAll(string(content), old, new)
+	err = os.WriteFile(tempPath, []byte(updated), 0644)
+	if err != nil {
+		t.Fatalf("failed to write dst file: %v", err)
 	}
 
-	updated := strings.ReplaceAll(string(data), old, new)
-
-	return os.WriteFile(filePath, []byte(updated), 0644)
+	return os.WriteFile(srcPath, []byte(updated), 0644)
 }
