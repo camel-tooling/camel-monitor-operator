@@ -46,6 +46,6 @@ metadata:
 spec:
   channel: latest
   installPlanApproval: Automatic
-  name: my-operator-single
+  name: camel-monitor-operator
   source: my-catalog-single
   sourceNamespace: olm
