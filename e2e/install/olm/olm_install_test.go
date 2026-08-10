@@ -183,138 +183,49 @@ import (
 // 	})
 // }
 
-func TestOLMSingleInstallation(t *testing.T) {
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, operatorNs string) {
-		bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
-		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a container registry and set BUNDLE_IMAGE_NAME env var")
-		os.Setenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR", "../../../")
+// func TestOLMSingleInstallation(t *testing.T) {
+// 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, operatorNs string) {
+// 		bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
+// 		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a container registry and set BUNDLE_IMAGE_NAME env var")
+// 		os.Setenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR", "../../../")
 
-		// Targeted namespace
-		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, targetNs string) {
-			// Install staged bundle (it must be available by building it before running the test)
-			// You can build it locally via `make bundle-push` action
-			ExpectExecSucceedWithTimeout(t, g,
-				Make(t,
-					"bundle-test",
-					fmt.Sprintf("BUNDLE_IMAGE_NAME=%s", bundleImageName),
-					fmt.Sprintf("NAMESPACE=%s", operatorNs),
-					fmt.Sprintf("OLM_INSTALL_MODE=%s=%s", "SingleNamespace", targetNs),
-				),
-				"300s",
-			)
-
-			// Check the operator pod is running
-			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).
-				Should(Equal(corev1.PodRunning))
-
-			// Verify an app running in the target namespace
-			t.Run("simple Deployment (monitored)", func(t *testing.T) {
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+targetNs, " ")...,
-					),
-				)
-				// Add the labels to discover it
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns-monitored -n "+targetNs, " ")...,
-					),
-				)
-				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-				g.Eventually(CamelMonitor(t, ctx, targetNs, "camel-ns-monitored")).Should(Not(BeNil()))
-				g.Eventually(
-					CamelMonitorStatus(t, ctx, targetNs, "camel-ns-monitored"),
-					TestTimeoutMedium,
-				).Should(
-					MatchFields(IgnoreExtras, Fields{
-						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-						"Replicas":    PointTo(Equal(int32(1))),
-						"SuccessRate": Not(BeNil()),
-					}),
-				)
-				// Delete deployment
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("delete deployment camel-app -n "+targetNs, " ")...,
-					),
-				)
-				// No CamelMonitors around (garbage collected)
-				g.Eventually(CamelMonitors(t, ctx, targetNs)).Should(BeEmpty())
-			})
-		})
-
-		// Untargeted namespace: verify the app running in another namespace is not monitored
-		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
-			// Verify an app running in the same namespace
-			t.Run("simple Deployment (non monitored)", func(t *testing.T) {
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
-					),
-				)
-				// Add the labels to discover it
-				ExpectExecSucceed(t, g,
-					exec.Command(
-						"kubectl",
-						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
-					),
-				)
-				// No CamelMonitors in this namespace
-				g.Consistently(CamelMonitors(t, ctx, ns2), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
-			})
-		})
-	})
-}
-
-// func TestOLMMultiInstallation(t *testing.T) {
-// 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns1 string) {
-// 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
-// 			bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
-// 			g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
-// 				" container registry and set BUNDLE_IMAGE_NAME env var")
-
-// 			replacedFile := ReplaceInFile(t, "modes/olm-single.yaml", map[string]string{
-// 				"$$BUNDLE_IMAGE$$":      bundleImageName,
-// 				"$$TARGET_NAMESPACE1$$": ns1,
-// 				"$$TARGET_NAMESPACE2$$": ns2,
-// 			})
-
-// 			ExpectExecSucceed(t, g,
-// 				exec.Command(
-// 					"kubectl",
-// 					strings.Split("apply -f "+replacedFile, " ")...,
+// 		// Targeted namespace
+// 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, targetNs string) {
+// 			// Install staged bundle (it must be available by building it before running the test)
+// 			// You can build it locally via `make bundle-push` action
+// 			ExpectExecSucceedWithTimeout(t, g,
+// 				Make(t,
+// 					"bundle-test",
+// 					fmt.Sprintf("BUNDLE_IMAGE_NAME=%s", bundleImageName),
+// 					fmt.Sprintf("NAMESPACE=%s", operatorNs),
+// 					fmt.Sprintf("OLM_INSTALL_MODE=%s=%s", "SingleNamespace", targetNs),
 // 				),
+// 				"300s",
 // 			)
-// 			// The Operator is installed in "operators" namespace
-// 			operatorNs := "operators"
 
 // 			// Check the operator pod is running
-// 			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"),
-// 				TestTimeoutLong).Should(Equal(corev1.PodRunning))
+// 			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).
+// 				Should(Equal(corev1.PodRunning))
 
-// 			// Verify the app running in target namespace 1 is monitored
-// 			t.Run("simple NS1 Deployment (monitored)", func(t *testing.T) {
+// 			// Verify an app running in the target namespace
+// 			t.Run("simple Deployment (monitored)", func(t *testing.T) {
 // 				ExpectExecSucceed(t, g,
 // 					exec.Command(
 // 						"kubectl",
-// 						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns1, " ")...,
+// 						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+targetNs, " ")...,
 // 					),
 // 				)
 // 				// Add the labels to discover it
 // 				ExpectExecSucceed(t, g,
 // 					exec.Command(
 // 						"kubectl",
-// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns1-monitored -n "+ns1, " ")...,
+// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns-monitored -n "+targetNs, " ")...,
 // 					),
 // 				)
 // 				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-// 				g.Eventually(CamelMonitor(t, ctx, ns1, "camel-ns1-monitored")).Should(Not(BeNil()))
+// 				g.Eventually(CamelMonitor(t, ctx, targetNs, "camel-ns-monitored")).Should(Not(BeNil()))
 // 				g.Eventually(
-// 					CamelMonitorStatus(t, ctx, ns1, "camel-ns1-monitored"),
+// 					CamelMonitorStatus(t, ctx, targetNs, "camel-ns-monitored"),
 // 					TestTimeoutMedium,
 // 				).Should(
 // 					MatchFields(IgnoreExtras, Fields{
@@ -327,15 +238,18 @@ func TestOLMSingleInstallation(t *testing.T) {
 // 				ExpectExecSucceed(t, g,
 // 					exec.Command(
 // 						"kubectl",
-// 						strings.Split("delete deployment camel-app -n "+ns1, " ")...,
+// 						strings.Split("delete deployment camel-app -n "+targetNs, " ")...,
 // 					),
 // 				)
 // 				// No CamelMonitors around (garbage collected)
-// 				g.Eventually(CamelMonitors(t, ctx, ns1)).Should(BeEmpty())
+// 				g.Eventually(CamelMonitors(t, ctx, targetNs)).Should(BeEmpty())
 // 			})
+// 		})
 
-// 			// Verify the app running in target namespace 2 is monitored
-// 			t.Run("simple NS2 Deployment (monitored)", func(t *testing.T) {
+// 		// Untargeted namespace: verify the app running in another namespace is not monitored
+// 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
+// 			// Verify an app running in the same namespace
+// 			t.Run("simple Deployment (non monitored)", func(t *testing.T) {
 // 				ExpectExecSucceed(t, g,
 // 					exec.Command(
 // 						"kubectl",
@@ -346,31 +260,139 @@ func TestOLMSingleInstallation(t *testing.T) {
 // 				ExpectExecSucceed(t, g,
 // 					exec.Command(
 // 						"kubectl",
-// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns2-monitored -n "+ns2, " ")...,
+// 						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+ns2, " ")...,
 // 					),
 // 				)
-// 				g.Eventually(CamelMonitor(t, ctx, ns2, "camel-ns2-monitored")).Should(Not(BeNil()))
-// 				g.Eventually(
-// 					CamelMonitorStatus(t, ctx, ns2, "camel-ns2-monitored"),
-// 					TestTimeoutMedium,
-// 				).Should(
-// 					MatchFields(IgnoreExtras, Fields{
-// 						"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-// 						"Replicas":    PointTo(Equal(int32(1))),
-// 						"SuccessRate": Not(BeNil()),
-// 					}),
-// 				)
-// 				// Delete deployment
-// 				ExpectExecSucceed(t, g,
-// 					exec.Command(
-// 						"kubectl",
-// 						strings.Split("delete deployment camel-app -n "+ns2, " ")...,
-// 					),
-// 				)
-// 				// No CamelMonitors around (garbage collected)
-// 				g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
+// 				// No CamelMonitors in this namespace
+// 				g.Consistently(CamelMonitors(t, ctx, ns2), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
 // 			})
-
 // 		})
 // 	})
 // }
+
+func TestOLMMultiInstallation(t *testing.T) {
+	// Operator NS
+	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, operatorNs string) {
+		bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
+		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a container registry and set BUNDLE_IMAGE_NAME env var")
+		os.Setenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR", "../../../")
+
+		// Target 1 NS
+		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns1 string) {
+			// Target 2 NS
+			WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
+				ExpectExecSucceedWithTimeout(t, g,
+					Make(t,
+						"bundle-test",
+						fmt.Sprintf("BUNDLE_IMAGE_NAME=%s", bundleImageName),
+						fmt.Sprintf("NAMESPACE=%s", operatorNs),
+						fmt.Sprintf("OLM_INSTALL_MODE=%s=%s,%s", "MultiNamespace", ns1, ns2),
+					),
+					"300s",
+				)
+
+				// Check the operator pod is running
+				g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).
+					Should(Equal(corev1.PodRunning))
+
+				// Verify the app running in target namespace 1 is monitored
+				t.Run("simple NS1 Deployment (monitored)", func(t *testing.T) {
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns1, " ")...,
+						),
+					)
+					// Add the labels to discover it
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns1-monitored -n "+ns1, " ")...,
+						),
+					)
+					// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
+					g.Eventually(CamelMonitor(t, ctx, ns1, "camel-ns1-monitored")).Should(Not(BeNil()))
+					g.Eventually(
+						CamelMonitorStatus(t, ctx, ns1, "camel-ns1-monitored"),
+						TestTimeoutMedium,
+					).Should(
+						MatchFields(IgnoreExtras, Fields{
+							"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
+							"Replicas":    PointTo(Equal(int32(1))),
+							"SuccessRate": Not(BeNil()),
+						}),
+					)
+					// Delete deployment
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("delete deployment camel-app -n "+ns1, " ")...,
+						),
+					)
+					// No CamelMonitors around (garbage collected)
+					g.Eventually(CamelMonitors(t, ctx, ns1)).Should(BeEmpty())
+				})
+
+				// Verify the app running in target namespace 2 is monitored
+				t.Run("simple NS2 Deployment (monitored)", func(t *testing.T) {
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns2, " ")...,
+						),
+					)
+					// Add the labels to discover it
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns2-monitored -n "+ns2, " ")...,
+						),
+					)
+					g.Eventually(CamelMonitor(t, ctx, ns2, "camel-ns2-monitored")).Should(Not(BeNil()))
+					g.Eventually(
+						CamelMonitorStatus(t, ctx, ns2, "camel-ns2-monitored"),
+						TestTimeoutMedium,
+					).Should(
+						MatchFields(IgnoreExtras, Fields{
+							"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
+							"Replicas":    PointTo(Equal(int32(1))),
+							"SuccessRate": Not(BeNil()),
+						}),
+					)
+					// Delete deployment
+					ExpectExecSucceed(t, g,
+						exec.Command(
+							"kubectl",
+							strings.Split("delete deployment camel-app -n "+ns2, " ")...,
+						),
+					)
+					// No CamelMonitors around (garbage collected)
+					g.Eventually(CamelMonitors(t, ctx, ns2)).Should(BeEmpty())
+				})
+
+			})
+		})
+
+		// Untargeted namespace: verify the app running in another namespace is not monitored
+		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, untargetedNs string) {
+			// Verify an app running in the same namespace
+			t.Run("simple Deployment (non monitored)", func(t *testing.T) {
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+untargetedNs, " ")...,
+					),
+				)
+				// Add the labels to discover it
+				ExpectExecSucceed(t, g,
+					exec.Command(
+						"kubectl",
+						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-non-monitored -n "+untargetedNs, " ")...,
+					),
+				)
+				// No CamelMonitors in this namespace
+				g.Consistently(CamelMonitors(t, ctx, untargetedNs), TestTimeoutShort, 10*time.Second).Should(BeEmpty())
+			})
+		})
+	})
+}
