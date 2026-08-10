@@ -24,6 +24,7 @@ package olm
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -183,50 +184,48 @@ import (
 // }
 
 func TestOLMSingleInstallation(t *testing.T) {
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
+	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, operatorNs string) {
 		bundleImageName, ok := os.LookupEnv("BUNDLE_IMAGE_NAME")
-		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a "+
-			" container registry and set BUNDLE_IMAGE_NAME env var")
+		g.Expect(ok).To(BeTrue(), "Missing bundle image: you need to build and push to a container registry and set BUNDLE_IMAGE_NAME env var")
+		os.Setenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR", "../../../")
 
-		replacedFile := ReplaceInFile(t, "modes/olm-single.yaml", map[string]string{
-			"$$BUNDLE_IMAGE$$":     bundleImageName,
-			"$$TARGET_NAMESPACE$$": ns,
-		})
+		// Targeted namespace
+		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, targetNs string) {
+			// Install staged bundle (it must be available by building it before running the test)
+			// You can build it locally via `make bundle-push` action
+			ExpectExecSucceedWithTimeout(t, g,
+				Make(t,
+					"bundle-test",
+					fmt.Sprintf("BUNDLE_IMAGE_NAME=%s", bundleImageName),
+					fmt.Sprintf("NAMESPACE=%s", operatorNs),
+					fmt.Sprintf("OLM_INSTALL_MODE=%s=%s", "SingleNamespace", targetNs),
+				),
+				"300s",
+			)
 
-		ExpectExecSucceed(t, g,
-			exec.Command(
-				"kubectl",
-				strings.Split("apply -f "+replacedFile, " ")...,
-			),
-		)
-		// The Operator is installed in "operators" namespace
-		operatorNs := "operators"
+			// Check the operator pod is running
+			g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"), TestTimeoutMedium).
+				Should(Equal(corev1.PodRunning))
 
-		// Check the operator pod is running
-		g.Eventually(PodStatusPhase(t, ctx, operatorNs, "camel.apache.org/component=operator"),
-			TestTimeoutLong).Should(Equal(corev1.PodRunning))
-
-		// Verify the app running in target namespace is monitored
-		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
 			// Verify an app running in the target namespace
 			t.Run("simple Deployment (monitored)", func(t *testing.T) {
 				ExpectExecSucceed(t, g,
 					exec.Command(
 						"kubectl",
-						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
+						strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+targetNs, " ")...,
 					),
 				)
 				// Add the labels to discover it
 				ExpectExecSucceed(t, g,
 					exec.Command(
 						"kubectl",
-						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns-monitored -n "+ns, " ")...,
+						strings.Split("label deployment camel-app camel.apache.org/monitor=camel-ns-monitored -n "+targetNs, " ")...,
 					),
 				)
 				// The name of the selector, "camel.apache.org/monitor: camel-sample-monitored"
-				g.Eventually(CamelMonitor(t, ctx, ns, "camel-ns-monitored")).Should(Not(BeNil()))
+				g.Eventually(CamelMonitor(t, ctx, targetNs, "camel-ns-monitored")).Should(Not(BeNil()))
 				g.Eventually(
-					CamelMonitorStatus(t, ctx, ns, "camel-ns-monitored"),
+					CamelMonitorStatus(t, ctx, targetNs, "camel-ns-monitored"),
 					TestTimeoutMedium,
 				).Should(
 					MatchFields(IgnoreExtras, Fields{
@@ -239,15 +238,15 @@ func TestOLMSingleInstallation(t *testing.T) {
 				ExpectExecSucceed(t, g,
 					exec.Command(
 						"kubectl",
-						strings.Split("delete deployment camel-app -n "+ns, " ")...,
+						strings.Split("delete deployment camel-app -n "+targetNs, " ")...,
 					),
 				)
 				// No CamelMonitors around (garbage collected)
-				g.Eventually(CamelMonitors(t, ctx, ns)).Should(BeEmpty())
+				g.Eventually(CamelMonitors(t, ctx, targetNs)).Should(BeEmpty())
 			})
 		})
 
-		// Verify the app running in another namespace is not monitored
+		// Untargeted namespace: verify the app running in another namespace is not monitored
 		WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns2 string) {
 			// Verify an app running in the same namespace
 			t.Run("simple Deployment (non monitored)", func(t *testing.T) {
