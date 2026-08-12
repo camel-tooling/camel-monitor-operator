@@ -39,6 +39,7 @@ const (
 	GrafanaLabelEnvVariable               = "GRAFANA_LABEL"
 	GrafanaDatasourceEnvVariable          = "GRAFANA_DS"
 	maxIdleEnvVariable                    = "MAX_IDLE_SEC"
+	checkVersionUpgradeEnvVariable        = "CHECK_VERSION_UPGRADE"
 
 	CamelMonitorLabelSelector = "LABEL_SELECTOR"
 
@@ -202,4 +203,13 @@ func GetSLIExchangeErrorThreshold() int {
 // GetSLIExchangeWarningThreshold returns the SLI Exchange warning threshold configuration. It fallbacks to default value.
 func GetSLIExchangeWarningThreshold() int {
 	return getOperatorEnvAsInt(SLIExchangeWarningPercentage, "SLI exchange warning threshold", defaultSLIExchangeWarningPercentage)
+}
+
+// GetCheckVersionUpgrade returns the variable controlling the feature checking if a new Camel version is available.
+func GetCheckVersionUpgrade() string {
+	if check, envSet := os.LookupEnv(checkVersionUpgradeEnvVariable); envSet {
+		return check
+	}
+
+	return ""
 }

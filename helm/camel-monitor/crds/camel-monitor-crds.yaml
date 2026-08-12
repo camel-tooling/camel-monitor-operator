@@ -60,6 +60,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="CPUPressure")].status
       name: CPU Pressure
       type: string
+    - jsonPath: .status.conditions[?(@.type=="UpgradeAvailable")].status
+      name: Upgrade available
+      type: string
     - description: The success rate SLI
       jsonPath: .status.sliExchangeSuccessRate.status
       name: Exchange SLI

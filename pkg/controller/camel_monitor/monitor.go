@@ -19,6 +19,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -70,7 +71,7 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	}
 
 	if objOwner == nil {
-		return nil, fmt.Errorf("baking deployment does not exist for App %s/%s", cmon.Namespace, cmon.Name)
+		return nil, fmt.Errorf("baking deployment object does not exist for App %s/%s", cmon.Namespace, cmon.Name)
 	}
 
 	nonManagedApp, err := synthetic.NonManagedCamelMonitorlicationFactory(*objOwner)
@@ -105,6 +106,7 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 		targetRuntimeInfo := getInfo(pods)
 		if targetRuntimeInfo != nil {
 			targetApp.Status.Info = formatRuntimeInfo(targetRuntimeInfo)
+			checkVersionUpgrade(ctx, targetRuntimeInfo, &targetApp.Status)
 		}
 
 		appRuntimeInfo := getInfo(cmon.Status.Pods)
@@ -217,14 +219,59 @@ func getInfo(pods []v1alpha1.PodInfo) *v1alpha1.RuntimeInfo {
 }
 
 func formatRuntimeInfo(runtimeInfo *v1alpha1.RuntimeInfo) string {
-	if runtimeInfo.RuntimeProvider != "" {
-		return fmt.Sprintf(
-			"%s - %s (%s)",
-			runtimeInfo.RuntimeProvider, runtimeInfo.RuntimeVersion, runtimeInfo.CamelVersion,
-		)
+	if runtimeInfo.RuntimeProvider == "" {
+		return ""
 	}
 
-	return ""
+	return fmt.Sprintf(
+		"%s - %s (%s)",
+		runtimeInfo.RuntimeProvider, runtimeInfo.RuntimeVersion, runtimeInfo.CamelVersion,
+	)
+}
+
+func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo, targetAppStatus *v1alpha1.CamelMonitorStatus) {
+	if runtimeInfo.RuntimeProvider == "" || platform.GetCheckVersionUpgrade() != "true" {
+		return
+	}
+
+	var (
+		mavenMeta MavenMetadata
+		err       error
+	)
+
+	switch runtimeInfo.RuntimeProvider {
+	case "Quarkus":
+		mavenMeta, err = GetCamelQuarkusMetadata(ctx)
+	case "Spring-Boot":
+		mavenMeta, err = GetCamelSpringBootMetadata(ctx)
+	case "Main":
+		mavenMeta, err = GetCamelMainMetadata(ctx)
+	default:
+		err = errors.New("unknown runtime provider " + runtimeInfo.RuntimeProvider)
+	}
+
+	conditionType := "UpgradeAvailable"
+	statusCondition := metav1.ConditionFalse
+	reason := "UpToDate"
+	message := "camel version is up to date with latest release"
+
+	if err != nil {
+		statusCondition = metav1.ConditionUnknown
+		reason = "FetchingError"
+		message = "could not fetch repository: " + err.Error()
+	} else if mavenMeta.Versioning.Release != "" && mavenMeta.Versioning.Release != runtimeInfo.RuntimeVersion {
+		statusCondition = metav1.ConditionTrue
+		reason = "NewVersionAvailable"
+		message = "New Camel " + runtimeInfo.RuntimeProvider + " runtime version " + mavenMeta.Versioning.Release + " is available"
+	}
+
+	targetAppStatus.AddCondition(metav1.Condition{
+		Type:               conditionType,
+		Status:             statusCondition,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		Reason:             reason,
+		Message:            message,
+	})
 }
 
 func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval *time.Duration, sliErrPerc, sliWarnPerc int) *v1alpha1.SLIExchangeSuccessRate {

@@ -595,10 +595,10 @@ install-k8s-ns: clone-kustomize-dir set-operator-id set-operator-env install-ope
 uninstall:
 ifdef NAMESPACE
 	kubectl delete deploy -l app=camel-monitor -n $(NAMESPACE)
-	kubectl delete configmap,secret,sa,rolebindings,clusterrolebindings,roles,clusterroles,prometheusrules -l app=camel-monitor -n $(NAMESPACE)
+	kubectl delete configmap,secret,sa,rolebindings,clusterrolebindings,roles,clusterroles -l app=camel-monitor -n $(NAMESPACE)
 else
 	kubectl delete deploy -l app=camel-monitor
-	kubectl delete configmap,secret,sa,rolebindings,clusterrolebindings,roles,clusterroles,prometheusrules -l app=camel-monitor
+	kubectl delete configmap,secret,sa,rolebindings,clusterrolebindings,roles,clusterroles -l app=camel-monitor
 endif
 
 install-crds:

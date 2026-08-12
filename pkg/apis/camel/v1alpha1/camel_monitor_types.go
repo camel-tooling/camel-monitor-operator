@@ -43,6 +43,7 @@ const (
 // +kubebuilder:printcolumn:name="Monitored",type=string,JSONPath=`.status.conditions[?(@.type=="Monitored")].status`
 // +kubebuilder:printcolumn:name="Memory Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="MemoryPressure")].status`
 // +kubebuilder:printcolumn:name="CPU Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="CPUPressure")].status`
+// +kubebuilder:printcolumn:name="Upgrade available",type=string,JSONPath=`.status.conditions[?(@.type=="UpgradeAvailable")].status`
 // +kubebuilder:printcolumn:name="Exchange SLI",type=string,JSONPath=`.status.sliExchangeSuccessRate.status`,description="The success rate SLI"
 // +kubebuilder:printcolumn:name="Last Exchange",type=date,JSONPath=`.status.sliExchangeSuccessRate.lastTimestamp`,description="Last exchange age"
 // +kubebuilder:subresource:status

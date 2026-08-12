@@ -78,6 +78,9 @@ spec:
             # Datasource where to extract metrics from
             - name: GRAFANA_DS
               value: "prometheus"
+            # Check if any upgrade version is available for the Camel runtime
+            - name: CHECK_VERSION_UPGRADE
+              value: "true"
             - name: POD_NAME
               valueFrom:
                 fieldRef:

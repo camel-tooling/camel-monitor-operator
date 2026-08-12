@@ -55,7 +55,7 @@ func TestMonitorActionBakingDeploymentMissing(t *testing.T) {
 	_, err = action.Handle(context.TODO(), app)
 
 	require.Error(t, err)
-	require.Equal(t, "baking deployment does not exist for App default/test-app", err.Error())
+	require.Equal(t, "baking deployment object does not exist for App default/test-app", err.Error())
 }
 
 func TestMonitorActionDeploymentScaledTo0(t *testing.T) {
