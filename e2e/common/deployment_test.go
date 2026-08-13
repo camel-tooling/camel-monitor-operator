@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestVerifyDeploymentQuarkus(t *testing.T) {
@@ -107,6 +108,13 @@ func testVerifyDeployment(t *testing.T, image string) {
 					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
 					"Replicas":    PointTo(Equal(int32(1))),
 					"SuccessRate": Not(BeNil()),
+					// Make sure that the check is not failing, it could be either true or false.
+					"Conditions": ContainElement(
+						MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal("UpgradeAvailable"),
+							"Status": Not(Equal(metav1.ConditionUnknown)),
+						}),
+					),
 				}),
 			)
 			// Scale up
