@@ -5,7 +5,7 @@
 <p align=center>
   <a href="https://github.com/camel-tooling/camel-monitor-operator/blob/main/LICENSE"><img src="https://img.shields.io/github/license/camel-tooling/camel-monitor-operator?color=104d92&style=for-the-badge" alt="License"/></a>
   <a href="https://camel-tooling.github.io/camel-dashboard/docs/operator/"><img src="https://img.shields.io/badge/Documentation-Camel_Dashboard_Operator-white?color=cf7428&style=for-the-badge" alt="Visit"/></a>
-  <img src="https://img.shields.io/badge/Coverage-63.7-yellow.svg?style=for-the-badge" alt="Visit"/>
+  <img src="https://img.shields.io/badge/Coverage-64.0-yellow.svg?style=for-the-badge" alt="Visit"/>
 </p><br/>
 
 <h2 align="center">The <a href="https://github.com/camel-tooling/camel-dashboard">Camel Dashboard</a> Monitoring for Kubernetes</h2>
