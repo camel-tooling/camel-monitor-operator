@@ -51,8 +51,10 @@ const (
 	defaultSLIExchangeWarningPercentage     = 10
 	CamelMonitorObservabilityPort           = "OBSERVABILITY_PORT"
 	defaultObservabilityPort            int = 9876
-	DefaultObservabilityMetrics             = "observe/metrics"
-	DefaultObservabilityHealth              = "observe/health"
+	CamelMonitorObservabilityMetrics        = "OBSERVABILITY_METRICS_ENDPOINT"
+	defaultObservabilityMetrics             = "observe/metrics"
+	CamelMonitorObservabilityHealth         = "OBSERVABILITY_HEALTH_ENDPOINT"
+	defaultObservabilityHealth              = "observe/health"
 	defaultGrafanaDatasource                = "prometheus"
 	defaultMaxIdleSec                   int = 60
 
@@ -193,6 +195,24 @@ func GetPollingInterval() time.Duration {
 // GetObservabilityPort returns the observability port set for the operator. It fallbacks to default value.
 func GetObservabilityPort() int {
 	return getOperatorEnvAsInt(CamelMonitorObservabilityPort, "observability port configuration", defaultObservabilityPort)
+}
+
+// GetObservabilityMetricsEndpoint returns the endpoint configured for the Prometheus metrics.
+func GetObservabilityMetricsEndpoint() string {
+	if observabilityMetricsEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetrics); envSet && observabilityMetricsEndpointnvVar != "" {
+		return observabilityMetricsEndpointnvVar
+	}
+
+	return defaultObservabilityMetrics
+}
+
+// GetObservabilityHealthEndpoint returns the endpoint configured for the health service.
+func GetObservabilityHealthEndpoint() string {
+	if observabilityHealthEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityHealth); envSet && observabilityHealthEndpointnvVar != "" {
+		return observabilityHealthEndpointnvVar
+	}
+
+	return defaultObservabilityHealth
 }
 
 // GetSLIExchangeErrorThreshold returns the SLI Exchange error threshold configuration. It fallbacks to default value.

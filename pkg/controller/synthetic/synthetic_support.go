@@ -43,9 +43,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type appObservabilityConf struct {
+	port            int
+	metricsEndpoint string
+	healthEndpoint  string
+}
+
 // getPods returns the pods backing the Camel application. You can provide an inspect flag to scrape health and metrics.
 func getPods(httpClient http.Client, ctx context.Context, c client.Client, namespace string,
-	matchLabelsSelector map[string]string, observabilityPort int, inspect bool, cpuLimit *string) ([]v1alpha1.PodInfo, error) {
+	matchLabelsSelector map[string]string, obsConf appObservabilityConf, inspect bool, cpuLimit *string) ([]v1alpha1.PodInfo, error) {
 	var podsInfo []v1alpha1.PodInfo
 
 	pods := &corev1.PodList{}
@@ -75,7 +81,7 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 		}
 
 		if isPodReady && inspect {
-			inspectPod(ctx, httpClient, &pod, &podInfo, podIp, observabilityPort, cpuLimit)
+			inspectPod(ctx, httpClient, &pod, &podInfo, podIp, obsConf, cpuLimit)
 		}
 
 		podsInfo = append(podsInfo, podInfo)
@@ -85,17 +91,18 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 }
 
 // inspectPod scan a ready Pod and scrape health and metrics which it stores on podInfo resource.
-func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodInfo, podIp string, observabilityPort int, cpuLimit *string) {
+func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, podInfo *v1alpha1.PodInfo, podIp string,
+	obsConf appObservabilityConf, cpuLimit *string) {
 	podInfo.ObservabilityService = &v1alpha1.ObservabilityServiceInfo{}
 
-	err := setHealth(ctx, httpClient, podInfo, podIp, observabilityPort)
+	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf.port, obsConf.healthEndpoint)
 	if err != nil {
 		reason := "Could not scrape health endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
 
-	err = setMetrics(ctx, httpClient, podInfo, podIp, observabilityPort)
+	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf.port, obsConf.metricsEndpoint)
 	if err != nil {
 		reason := "Could not scrape metrics endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
@@ -157,14 +164,48 @@ func getObservabilityPort(appAnnotations map[string]string) int {
 	return defaultPort
 }
 
+func getObservabilityMetricsEndpoint(appAnnotations map[string]string) string {
+	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoint()
+	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint] == "" {
+		return defaultMetricsEndpoint
+	}
+
+	metricsEndpoint := appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint]
+	if metricsEndpoint != "" {
+		return metricsEndpoint
+	} else {
+		log.Info("could not properly parse application observability services metrics endpoint configuration, "+
+			"fallback to default operator value %d", defaultMetricsEndpoint)
+	}
+
+	return defaultMetricsEndpoint
+}
+
+func getObservabilityHealthEndpoint(appAnnotations map[string]string) string {
+	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoint()
+	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint] == "" {
+		return defaultHealthEndpoint
+	}
+
+	healthEndpoint := appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint]
+	if healthEndpoint != "" {
+		return healthEndpoint
+	} else {
+		log.Info("could not properly parse application observability services health endpoint configuration, "+
+			"fallback to default operator value %d", defaultHealthEndpoint)
+	}
+
+	return defaultHealthEndpoint
+}
+
 //nolint:nestif
-func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
+func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int, endpoint string) error {
 	// NOTE: we're not using a proxy as a design choice in order
 	// to have a faster turnaround.
 	hostPort := net.JoinHostPort(podIp, strconv.FormatInt(int64(port), 10))
 
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, platform.DefaultObservabilityMetrics), nil)
+		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, endpoint), nil)
 	if err != nil {
 		return err
 	}
@@ -183,7 +224,7 @@ func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.P
 	}()
 
 	if resp.StatusCode == http.StatusOK {
-		podInfo.ObservabilityService.MetricsEndpoint = platform.DefaultObservabilityMetrics
+		podInfo.ObservabilityService.MetricsEndpoint = endpoint
 		podInfo.ObservabilityService.MetricsPort = port
 
 		if podInfo.Runtime == nil {
@@ -332,13 +373,13 @@ func accept(labelPair []*dto.LabelPair, labelName, labelValue string) bool {
 	return false
 }
 
-func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int) error {
+func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo, podIp string, port int, healthEndpoint string) error {
 	// NOTE: we're not using a proxy as a design choice in order
 	// to have a faster turnaround.
 	hostPort := net.JoinHostPort(podIp, strconv.FormatInt(int64(port), 10))
 
 	req, err := http.NewRequestWithContext(
-		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, platform.DefaultObservabilityHealth), nil)
+		ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, healthEndpoint), nil)
 	if err != nil {
 		return err
 	}
@@ -360,7 +401,7 @@ func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.Po
 	// health information
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusServiceUnavailable {
 		podInfo.ObservabilityService.HealthPort = port
-		podInfo.ObservabilityService.HealthEndpoint = platform.DefaultObservabilityHealth
+		podInfo.ObservabilityService.HealthEndpoint = healthEndpoint
 
 		status, err = parseHealthStatus(resp.Body)
 		if err != nil {

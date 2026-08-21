@@ -96,8 +96,14 @@ func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Clie
 		cpuLimitString = strconv.FormatInt(int64(cpuCoreLimit), 10)
 	}
 
+	obsConf := appObservabilityConf{
+		port:            getObservabilityPort(app.GetAnnotations()),
+		metricsEndpoint: getObservabilityMetricsEndpoint(app.GetAnnotations()),
+		healthEndpoint:  getObservabilityHealthEndpoint(app.GetAnnotations()),
+	}
+
 	return getPods(*app.httpClient, ctx, c, app.deploy.GetNamespace(),
-		app.GetMatchLabelsSelector(), getObservabilityPort(app.GetAnnotations()), true, &cpuLimitString)
+		app.GetMatchLabelsSelector(), obsConf, true, &cpuLimitString)
 }
 
 // GetMatchLabelsSelector returns the labels selector used to select Pods belonging to the backing application.
