@@ -66,7 +66,7 @@ func TestSetHealthHttpError(t *testing.T) {
 	defer server.Close()
 
 	podInfo := &v1alpha1.PodInfo{}
-	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", 0)
+	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", 0, "/health")
 	require.Error(t, err)
 }
 
@@ -87,7 +87,7 @@ func TestSetHealthStatusOK(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, "/health")
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -111,7 +111,7 @@ func TestSetHealthStatus503(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, "/health")
 	require.NoError(t, err)
 
 	require.Equal(t, "Degraded", podInfo.Runtime.Status)
@@ -134,7 +134,7 @@ func TestSetHealthStatusNotFound(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port)
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, "/health")
 	require.NoError(t, err)
 
 	require.Equal(t, "404 Not Found", podInfo.Runtime.Status)
@@ -180,11 +180,11 @@ camel_exchanges_last_timestamp 123456
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, "/metrics")
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
-	require.Equal(t, platform.DefaultObservabilityMetrics, podInfo.ObservabilityService.MetricsEndpoint)
+	require.Equal(t, "/metrics", podInfo.ObservabilityService.MetricsEndpoint)
 	require.Equal(t, port, podInfo.ObservabilityService.MetricsPort)
 
 	// Verify runtime + exchange initialized
@@ -213,7 +213,7 @@ func TestSetMetricsStatusNotOK(t *testing.T) {
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, "/metrics")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "HTTP status not OK")
 }
@@ -260,6 +260,90 @@ func TestGetObservabilityPort(t *testing.T) {
 	}
 }
 
+func TestGetObservabilityMetrics(t *testing.T) {
+	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoint()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			expected:    defaultMetricsEndpoint,
+		},
+		{
+			name:        "missing annotation",
+			annotations: map[string]string{},
+			expected:    defaultMetricsEndpoint,
+		},
+		{
+			name: "valid metric",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesMetricsEndpoint: "/my-special-metrics",
+			},
+			expected: "/my-special-metrics",
+		},
+		{
+			name: "invalid metrics",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesMetricsEndpoint: "",
+			},
+			expected: defaultMetricsEndpoint,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			endpt := getObservabilityMetricsEndpoint(tt.annotations)
+			assert.Equal(t, tt.expected, endpt)
+		})
+	}
+}
+
+func TestGetObservabilityHealth(t *testing.T) {
+	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoint()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    string
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			expected:    defaultHealthEndpoint,
+		},
+		{
+			name:        "missing annotation",
+			annotations: map[string]string{},
+			expected:    defaultHealthEndpoint,
+		},
+		{
+			name: "valid health",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesHealthEndpoint: "/my-special-health",
+			},
+			expected: "/my-special-health",
+		},
+		{
+			name: "invalid health",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesHealthEndpoint: "",
+			},
+			expected: defaultHealthEndpoint,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			endpt := getObservabilityHealthEndpoint(tt.annotations)
+			assert.Equal(t, tt.expected, endpt)
+		})
+	}
+}
+
 func TestInspectPods(t *testing.T) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -282,8 +366,12 @@ func TestInspectPods(t *testing.T) {
 		Timeout: time.Second,
 	}
 	// Use localhost with a wrong port to simulate failure
-	badPort := -1
-	inspectPod(t.Context(), httpClient, pod, podInfo, "127.0.0.1", badPort, nil)
+	conf := appObservabilityConf{
+		port:            -1,
+		metricsEndpoint: "/metrics",
+		healthEndpoint:  "/health",
+	}
+	inspectPod(t.Context(), httpClient, pod, podInfo, "127.0.0.1", conf, nil)
 
 	assert.NotNil(t, podInfo.ObservabilityService)
 	assert.False(t, podInfo.Ready)
@@ -329,8 +417,13 @@ func TestGetPodsWithInspectionFailure(t *testing.T) {
 	fakeClient, err := internal.NewFakeClient(pod1, pod2)
 	require.NoError(t, err)
 
+	conf := appObservabilityConf{
+		port:            -1,
+		metricsEndpoint: "/metrics",
+		healthEndpoint:  "/health",
+	}
 	podsInfo, err := getPods(http.Client{}, context.Background(), fakeClient, "default",
-		map[string]string{"app": "test"}, -1, true, nil)
+		map[string]string{"app": "test"}, conf, true, nil)
 
 	assert.NoError(t, err)
 	assert.Len(t, podsInfo, 2)
@@ -387,7 +480,7 @@ jvm_memory_used_bytes{area="nonheap",id="Metaspace"} 5.7801568E7
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, "/metrics")
 	require.NoError(t, err)
 
 	assert.Equal(t, "14", *podInfo.ProcessCPUUsed)
@@ -431,7 +524,7 @@ jvm_memory_used_bytes{area="heap",id="G1 Survivor Space"} 2081872.0
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, "/metrics")
 	require.NoError(t, err)
 
 	assert.True(t, podInfo.HasMemoryPressure)
@@ -462,7 +555,7 @@ process_cpu_usage 0.1
 	port, err := strconv.Atoi(portStr)
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port)
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, "/metrics")
 	require.NoError(t, err)
 	// value is in millicores
 	err = setCPUPressure(podInfo, ptr.To("500"))

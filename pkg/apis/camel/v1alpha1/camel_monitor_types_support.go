@@ -36,6 +36,10 @@ const (
 	MonitorPollingIntervalSecondsAnnotation = camelPrefix + "/polling-interval-seconds"
 	// MonitorObservabilityServicesPort is used to instruct an application to use a specific port for metrics scraping.
 	MonitorObservabilityServicesPort = camelPrefix + "/observability-services-port"
+	// MonitorObservabilityServicesMetricsEndpoint is used to instruct an application to use a specific endpoint for metrics scraping.
+	MonitorObservabilityServicesMetricsEndpoint = camelPrefix + "/metrics-endpoint"
+	// MonitorObservabilityServicesHealthEndpoint is used to instruct an application to use a specific endpoint for health scraping.
+	MonitorObservabilityServicesHealthEndpoint = camelPrefix + "/health-endpoint"
 	// MonitorSLIExchangeErrorPercentageAnnotation is used to instruct a given application error percentage SLI Exchange.
 	MonitorSLIExchangeErrorPercentageAnnotation = camelPrefix + "/sli-exchange-error-percentage"
 	// MonitorSLIExchangeWarningPercentageAnnotation is used to instruct a given application warning percentage SLI Exchange.

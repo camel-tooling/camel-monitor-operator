@@ -83,6 +83,18 @@ func TestGetObservabilityPort_Default(t *testing.T) {
 	assert.Equal(t, defaultObservabilityPort, GetObservabilityPort())
 }
 
+func TestGetObservabilityMetrics_Default(t *testing.T) {
+	t.Setenv(CamelMonitorObservabilityMetrics, "")
+
+	assert.Equal(t, defaultObservabilityMetrics, GetObservabilityMetricsEndpoint())
+}
+
+func TestGetObservabilityHealth_Default(t *testing.T) {
+	t.Setenv(CamelMonitorObservabilityHealth, "")
+
+	assert.Equal(t, defaultObservabilityHealth, GetObservabilityHealthEndpoint())
+}
+
 func TestSLIThresholds(t *testing.T) {
 	t.Setenv(SLIExchangeErrorPercentage, "7")
 	assert.Equal(t, 7, GetSLIExchangeErrorThreshold())
