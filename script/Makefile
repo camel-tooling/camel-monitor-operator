@@ -24,6 +24,7 @@ PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 LOCALBIN := $(PROJECT_PATH)/bin
 
 VERSIONFILE := pkg/util/defaults/defaults.go
+BUILD_PROVIDER ?= Apache
 VERSION ?= 0.3.0-SNAPSHOT
 LAST_RELEASED_IMAGE_NAME := camel-monitor-operator
 LAST_RELEASED_VERSION ?= 0.2.0
@@ -87,11 +88,16 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-# Build
+# Build variables
 ifdef GIT_COMMIT
 GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.GitCommit=$(GIT_COMMIT)
 else
 $(warning Could not retrieve a valid Git Commit)
+endif
+ifdef BUILD_PROVIDER
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.BuildProvider=$(BUILD_PROVIDER)
+else
+$(warning Could not retrieve a valid Build provider)
 endif
 
 GOFLAGS = -ldflags "$(GOLDFLAGS)" -trimpath
@@ -139,6 +145,8 @@ codegen:
 	@echo "const (" >> $(VERSIONFILE)
 	@echo "  // Version -- ." >> $(VERSIONFILE)
 	@echo "  Version = \"$(CUSTOM_VERSION)\"" >> $(VERSIONFILE)
+	@echo "  // BuildProvider -- ." >> $(VERSIONFILE)
+	@echo "  BuildProvider = \"$(BUILD_PROVIDER)\"" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
 	@echo ")" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)

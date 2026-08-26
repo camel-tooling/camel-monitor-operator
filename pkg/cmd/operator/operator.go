@@ -65,6 +65,7 @@ var log = logutil.Log.WithName("cmd")
 func printVersion() {
 	log.Infof("Go Version: %s", runtime.Version())
 	log.Infof("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
+	log.Infof("Camel Monitor Operator Build: %v", defaults.BuildProvider)
 	log.Infof("Camel Monitor Operator Version: %v", defaults.Version)
 	log.Infof("Camel Monitor Operator Git Commit: %v", defaults.GitCommit)
 	log.Infof("Camel Monitor Operator ID: %v", defaults.OperatorID())
