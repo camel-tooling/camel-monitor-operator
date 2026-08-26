@@ -24,6 +24,8 @@ package defaults
 const (
 	// Version -- .
 	Version = "0.3.0-SNAPSHOT"
+	// BuildProvider -- .
+	BuildProvider = "Apache"
 )
 
 // GitCommit must be provided during application build.
