@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG CK_BASE_IMAGE=registry.access.redhat.com/ubi10/ubi-minimal:10.2
+ARG CK_BASE_IMAGE=registry.access.redhat.com/ubi9/ubi-minimal:9.8
 
 FROM $CK_BASE_IMAGE AS base
 
