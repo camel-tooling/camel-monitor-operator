@@ -87,7 +87,7 @@ func (app *nonManagedCamelCronjob) GetPods(ctx context.Context, c client.Client)
 	obsConf := appObservabilityConf{
 		port:            getObservabilityPort(app.GetAnnotations()),
 		metricsEndpoint: getObservabilityMetricsEndpoint(app.GetAnnotations()),
-		healthEndpoint:  getObservabilityHealthEndpoint(app.GetAnnotations()),
+		healthEndpoint:  getObservabilityHealthEndpoints(app.GetAnnotations()),
 	}
 
 	return getPods(*app.httpClient, ctx, c, app.cron.GetNamespace(),

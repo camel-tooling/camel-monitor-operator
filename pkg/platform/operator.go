@@ -52,18 +52,21 @@ const (
 	CamelMonitorObservabilityPort           = "OBSERVABILITY_PORT"
 	defaultObservabilityPort            int = 9876
 	CamelMonitorObservabilityMetrics        = "OBSERVABILITY_METRICS_ENDPOINT"
-	defaultObservabilityMetrics             = "observe/metrics"
 	CamelMonitorObservabilityHealth         = "OBSERVABILITY_HEALTH_ENDPOINT"
-	defaultObservabilityHealth              = "observe/health"
 	defaultGrafanaDatasource                = "prometheus"
 	defaultMaxIdleSec                   int = 60
 
 	OperatorLockName = "camel-monitor-lock"
 )
 
-var defaultPrometheusLabels = map[string]string{"camel.apache.org/prometheus": "camel-monitor-operator"}
-var defaultGrafanaLabels = map[string]string{"camel.apache.org/grafana": "camel-monitor-operator"}
-var defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "camel-monitor-operator", "app": "camel-monitor"}
+var (
+	defaultPrometheusLabels     = map[string]string{"camel.apache.org/prometheus": "camel-monitor-operator"}
+	defaultGrafanaLabels        = map[string]string{"camel.apache.org/grafana": "camel-monitor-operator"}
+	defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "camel-monitor-operator", "app": "camel-monitor"}
+	// we prioritize camel opinionated convention, quarkus and spring boot respectively.
+	defaultObservabilityHealth  = []string{"observe/health", "q/health", "actuator/health"}
+	defaultObservabilityMetrics = []string{"observe/metrics", "q/metrics", "actuator/prometheus"}
+)
 
 // IsCurrentOperatorGlobal returns true if the operator is configured to watch all namespaces.
 func IsCurrentOperatorGlobal() bool {
@@ -198,18 +201,18 @@ func GetObservabilityPort() int {
 }
 
 // GetObservabilityMetricsEndpoint returns the endpoint configured for the Prometheus metrics.
-func GetObservabilityMetricsEndpoint() string {
+func GetObservabilityMetricsEndpoint() []string {
 	if observabilityMetricsEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetrics); envSet && observabilityMetricsEndpointnvVar != "" {
-		return observabilityMetricsEndpointnvVar
+		return []string{observabilityMetricsEndpointnvVar}
 	}
 
 	return defaultObservabilityMetrics
 }
 
 // GetObservabilityHealthEndpoint returns the endpoint configured for the health service.
-func GetObservabilityHealthEndpoint() string {
+func GetObservabilityHealthEndpoint() []string {
 	if observabilityHealthEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityHealth); envSet && observabilityHealthEndpointnvVar != "" {
-		return observabilityHealthEndpointnvVar
+		return []string{observabilityHealthEndpointnvVar}
 	}
 
 	return defaultObservabilityHealth
