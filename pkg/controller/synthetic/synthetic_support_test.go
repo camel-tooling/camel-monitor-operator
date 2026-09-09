@@ -340,13 +340,14 @@ func TestSetMetricsStatusNotOK(t *testing.T) {
 	require.Contains(t, err.Error(), "HTTP status not OK")
 }
 
-func TestGetObservabilityPort(t *testing.T) {
-	defaultPort := platform.GetObservabilityPort()
+func TestGetObservabilityHealthPort(t *testing.T) {
+	_, defaultPort := platform.GetObservabilityHealthPort()
 
 	tests := []struct {
 		name        string
 		annotations map[string]string
 		expected    int
+		existing    int
 	}{
 		{
 			name:        "nil annotations",
@@ -361,34 +362,88 @@ func TestGetObservabilityPort(t *testing.T) {
 		{
 			name: "valid port",
 			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesPort: "9090",
+				v1alpha1.MonitorObservabilityServicesHealthPort: "9090",
 			},
 			expected: 9090,
 		},
 		{
 			name: "invalid port",
 			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesPort: "not-a-number",
+				v1alpha1.MonitorObservabilityServicesHealthPort: "not-a-number",
 			},
 			expected: defaultPort,
+		},
+		{
+			name:     "existing port",
+			expected: 8888,
+			existing: 8888,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port := getObservabilityPort(tt.annotations)
+			port := getObservabilityHealthPort(tt.annotations, tt.existing)
+			assert.Equal(t, tt.expected, port)
+		})
+	}
+}
+
+func TestGetObservabilityMetricsPort(t *testing.T) {
+	_, defaultPort := platform.GetObservabilityMetricsPort()
+
+	tests := []struct {
+		name        string
+		annotations map[string]string
+		expected    int
+		existing    int
+	}{
+		{
+			name:        "nil annotations",
+			annotations: nil,
+			expected:    defaultPort,
+		},
+		{
+			name:        "missing annotation",
+			annotations: map[string]string{},
+			expected:    defaultPort,
+		},
+		{
+			name: "valid port",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesMetricsPort: "9090",
+			},
+			expected: 9090,
+		},
+		{
+			name: "invalid port",
+			annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesMetricsPort: "not-a-number",
+			},
+			expected: defaultPort,
+		},
+		{
+			name:     "existing port",
+			expected: 8888,
+			existing: 8888,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := getObservabilityMetricsPort(tt.annotations, tt.existing)
 			assert.Equal(t, tt.expected, port)
 		})
 	}
 }
 
 func TestGetObservabilityMetrics(t *testing.T) {
-	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoints()
+	_, defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoints()
 
 	tests := []struct {
 		name        string
 		annotations map[string]string
 		expected    []string
+		existing    string
 	}{
 		{
 			name:        "nil annotations",
@@ -414,23 +469,29 @@ func TestGetObservabilityMetrics(t *testing.T) {
 			},
 			expected: defaultMetricsEndpoint,
 		},
+		{
+			name:     "existing metrics",
+			expected: []string{"/existing"},
+			existing: "/existing",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpt := getObservabilityMetricsEndpoint(tt.annotations)
+			endpt := getObservabilityMetricsEndpoint(tt.annotations, tt.existing)
 			assert.Equal(t, tt.expected, endpt)
 		})
 	}
 }
 
 func TestGetObservabilityHealth(t *testing.T) {
-	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoints()
+	_, defaultHealthEndpoint := platform.GetObservabilityHealthEndpoints()
 
 	tests := []struct {
 		name        string
 		annotations map[string]string
 		expected    []string
+		existing    string
 	}{
 		{
 			name:        "nil annotations",
@@ -456,11 +517,16 @@ func TestGetObservabilityHealth(t *testing.T) {
 			},
 			expected: defaultHealthEndpoint,
 		},
+		{
+			name:     "existing metrics",
+			expected: []string{"/existing"},
+			existing: "/existing",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			endpt := getObservabilityHealthEndpoints(tt.annotations)
+			endpt := getObservabilityHealthEndpoints(tt.annotations, tt.existing)
 			assert.Equal(t, tt.expected, endpt)
 		})
 	}
@@ -489,9 +555,10 @@ func TestInspectPods(t *testing.T) {
 	}
 	// Use localhost with a wrong port to simulate failure
 	conf := appObservabilityConf{
-		port:            -1,
-		metricsEndpoint: []string{"/metrics"},
-		healthEndpoint:  []string{"/health"},
+		HealthPort:      -1,
+		MetricsPort:     -1,
+		MetricsEndpoint: []string{"/metrics"},
+		HealthEndpoint:  []string{"/health"},
 	}
 	inspectPod(t.Context(), httpClient, pod, podInfo, "127.0.0.1", conf, nil)
 
@@ -540,9 +607,10 @@ func TestGetPodsWithInspectionFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	conf := appObservabilityConf{
-		port:            -1,
-		metricsEndpoint: []string{"/metrics"},
-		healthEndpoint:  []string{"/health"},
+		HealthPort:      -1,
+		MetricsPort:     -1,
+		MetricsEndpoint: []string{"/metrics"},
+		HealthEndpoint:  []string{"/health"},
 	}
 	podsInfo, err := getPods(http.Client{}, context.Background(), fakeClient, "default",
 		map[string]string{"app": "test"}, conf, true, nil)
@@ -704,4 +772,102 @@ func TestCPUPressureNoMax(t *testing.T) {
 	err := setCPUPressure(podInfo, ptr.To(""))
 	require.NoError(t, err)
 	assert.False(t, podInfo.HasCPUPressure)
+}
+
+func TestGetAppObservabilityConf(t *testing.T) {
+	tests := []struct {
+		name string
+		cmon *v1alpha1.CamelMonitor
+
+		wantHealthPort      int
+		wantMetricsPort     int
+		wantMetricsEndpoint []string
+		wantHealthEndpoint  []string
+	}{
+		{
+			name:                "no pods",
+			cmon:                &v1alpha1.CamelMonitor{},
+			wantHealthPort:      platform.DefaultObservabilityPort,
+			wantMetricsPort:     platform.DefaultObservabilityPort,
+			wantMetricsEndpoint: platform.DefaultObservabilityMetrics,
+			wantHealthEndpoint:  platform.DefaultObservabilityHealth,
+		},
+		{
+			name: "pod exists but observability service is nil",
+			cmon: &v1alpha1.CamelMonitor{
+				Status: v1alpha1.CamelMonitorStatus{
+					Pods: []v1alpha1.PodInfo{
+						{
+							ObservabilityService: nil,
+						},
+					},
+				},
+			},
+			wantHealthPort:      platform.DefaultObservabilityPort,
+			wantMetricsPort:     platform.DefaultObservabilityPort,
+			wantMetricsEndpoint: platform.DefaultObservabilityMetrics,
+			wantHealthEndpoint:  platform.DefaultObservabilityHealth,
+		},
+		{
+			name: "existing observability configuration is reused",
+			cmon: &v1alpha1.CamelMonitor{
+				Status: v1alpha1.CamelMonitorStatus{
+					Pods: []v1alpha1.PodInfo{
+						{
+							ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
+								HealthPort:      8080,
+								MetricsPort:     9090,
+								MetricsEndpoint: "/custom/metrics",
+								HealthEndpoint:  "/custom/health",
+							},
+						},
+					},
+				},
+			},
+			wantHealthPort:      8080,
+			wantMetricsPort:     9090,
+			wantMetricsEndpoint: []string{"/custom/metrics"},
+			wantHealthEndpoint:  []string{"/custom/health"},
+		},
+		{
+			name: "existing configuration is overridden by app annotations",
+			cmon: &v1alpha1.CamelMonitor{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						v1alpha1.MonitorObservabilityServicesHealthPort:      "1234",
+						v1alpha1.MonitorObservabilityServicesMetricsPort:     "4321",
+						v1alpha1.MonitorObservabilityServicesHealthEndpoint:  "/my-app-health",
+						v1alpha1.MonitorObservabilityServicesMetricsEndpoint: "/my-app-metrics",
+					},
+				},
+				Status: v1alpha1.CamelMonitorStatus{
+					Pods: []v1alpha1.PodInfo{
+						{
+							ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
+								HealthPort:      8080,
+								MetricsPort:     9090,
+								MetricsEndpoint: "/status/metrics",
+								HealthEndpoint:  "/health",
+							},
+						},
+					},
+				},
+			},
+			wantHealthPort:      1234,
+			wantMetricsPort:     4321,
+			wantMetricsEndpoint: []string{"/my-app-metrics"},
+			wantHealthEndpoint:  []string{"/my-app-health"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetAppObservabilityConf(tt.cmon)
+
+			assert.Equal(t, tt.wantHealthPort, got.HealthPort)
+			assert.Equal(t, tt.wantMetricsPort, got.MetricsPort)
+			assert.Equal(t, tt.wantMetricsEndpoint, got.MetricsEndpoint)
+			assert.Equal(t, tt.wantHealthEndpoint, got.HealthEndpoint)
+		})
+	}
 }

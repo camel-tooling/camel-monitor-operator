@@ -44,10 +44,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// appObservabilityConf represents the configuration used to scrape the observability services available.
 type appObservabilityConf struct {
-	port            int
-	metricsEndpoint []string
-	healthEndpoint  []string
+	HealthPort      int
+	MetricsPort     int
+	MetricsEndpoint []string
+	HealthEndpoint  []string
 }
 
 // getPods returns the pods backing the Camel application. You can provide an inspect flag to scrape health and metrics.
@@ -96,14 +98,14 @@ func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, po
 	obsConf appObservabilityConf, cpuLimit *string) {
 	podInfo.ObservabilityService = &v1alpha1.ObservabilityServiceInfo{}
 
-	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf.port, obsConf.healthEndpoint)
+	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf.HealthPort, obsConf.HealthEndpoint)
 	if err != nil {
 		reason := "Could not scrape health endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
 
-	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf.port, obsConf.metricsEndpoint)
+	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf.MetricsPort, obsConf.MetricsEndpoint)
 	if err != nil {
 		reason := "Could not scrape metrics endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
@@ -148,55 +150,95 @@ func setCPUPressure(podInfo *v1alpha1.PodInfo, cpuLimit *string) error {
 	return nil
 }
 
-func getObservabilityPort(appAnnotations map[string]string) int {
-	defaultPort := platform.GetObservabilityPort()
-	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesPort] == "" {
-		return defaultPort
+// GetAppObservabilityConf is in charge to return the configuration required to scrape application observability
+// endpoints. It tries to return any existing proving endpoints (stored in status), otherwise it returns a new
+// configuration based on conventional values.
+func GetAppObservabilityConf(cmon *v1alpha1.CamelMonitor) appObservabilityConf {
+	existingHealthPort := -1
+	existingMetricsPort := -1
+	existingMetricsEndpoint := ""
+	existingHealthEndpoint := ""
+
+	if len(cmon.Status.Pods) > 0 && cmon.Status.Pods[0].ObservabilityService != nil {
+		// we try to reuse any existing previous proven working configuration
+		existingHealthPort = cmon.Status.Pods[0].ObservabilityService.HealthPort
+		existingMetricsPort = cmon.Status.Pods[0].ObservabilityService.MetricsPort
+		existingMetricsEndpoint = cmon.Status.Pods[0].ObservabilityService.MetricsEndpoint
+		existingHealthEndpoint = cmon.Status.Pods[0].ObservabilityService.HealthEndpoint
 	}
 
-	port, err := strconv.Atoi(appAnnotations[v1alpha1.MonitorObservabilityServicesPort])
-	if err == nil {
-		return port
-	} else {
-		log.Error(err, "could not properly parse application observability services port configuration, "+
-			"fallback to default operator value %d", defaultPort)
+	obsConf := appObservabilityConf{
+		HealthPort:      getObservabilityHealthPort(cmon.GetAnnotations(), existingHealthPort),
+		MetricsPort:     getObservabilityMetricsPort(cmon.GetAnnotations(), existingMetricsPort),
+		MetricsEndpoint: getObservabilityMetricsEndpoint(cmon.GetAnnotations(), existingMetricsEndpoint),
+		HealthEndpoint:  getObservabilityHealthEndpoints(cmon.GetAnnotations(), existingHealthEndpoint),
+	}
+
+	return obsConf
+}
+
+func getObservabilityHealthPort(appAnnotations map[string]string, existingPort int) int {
+	if appAnnotations != nil && appAnnotations[v1alpha1.MonitorObservabilityServicesHealthPort] != "" {
+		port, err := strconv.Atoi(appAnnotations[v1alpha1.MonitorObservabilityServicesHealthPort])
+		if err == nil {
+			return port
+		} else {
+			log.Error(err, "could not properly parse application observability services health port configuration, "+
+				"fallback to default operator value")
+		}
+	}
+
+	isDefault, defaultPort := platform.GetObservabilityHealthPort()
+	if isDefault && existingPort > 0 {
+		return existingPort
 	}
 
 	return defaultPort
 }
 
-func getObservabilityMetricsEndpoint(appAnnotations map[string]string) []string {
-	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoints()
-	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint] == "" {
-		return defaultMetricsEndpoint
+func getObservabilityMetricsPort(appAnnotations map[string]string, existingPort int) int {
+	if appAnnotations != nil && appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsPort] != "" {
+		port, err := strconv.Atoi(appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsPort])
+		if err == nil {
+			return port
+		} else {
+			log.Error(err, "could not properly parse application observability services metrics port configuration, "+
+				"fallback to default operator value")
+		}
 	}
 
-	metricsEndpoints := appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint]
-	if metricsEndpoints != "" {
-		return strings.Split(metricsEndpoints, ",")
-	} else {
-		log.Info("could not properly parse application observability services metrics endpoint configuration, "+
-			"fallback to default operator value %d", defaultMetricsEndpoint)
+	isDefault, defaultPort := platform.GetObservabilityMetricsPort()
+	if isDefault && existingPort > 0 {
+		return existingPort
 	}
 
-	return defaultMetricsEndpoint
+	return defaultPort
 }
 
-func getObservabilityHealthEndpoints(appAnnotations map[string]string) []string {
-	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoints()
-	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint] == "" {
-		return defaultHealthEndpoint
+func getObservabilityMetricsEndpoint(appAnnotations map[string]string, existingEndpoint string) []string {
+	if appAnnotations != nil && appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint] != "" {
+		return strings.Split(appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint], ",")
 	}
 
-	healthEndpoints := appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint]
-	if healthEndpoints != "" {
-		return strings.Split(healthEndpoints, ",")
-	} else {
-		log.Info("could not properly parse application observability services health endpoint configuration, "+
-			"fallback to default operator value %d", defaultHealthEndpoint)
+	isDefault, defaultEndpoint := platform.GetObservabilityMetricsEndpoints()
+	if isDefault && existingEndpoint != "" {
+		return []string{existingEndpoint}
 	}
 
-	return defaultHealthEndpoint
+	return defaultEndpoint
+}
+
+func getObservabilityHealthEndpoints(appAnnotations map[string]string, existingEndpoint string) []string {
+	if appAnnotations != nil && appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint] != "" {
+		return strings.Split(appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint], ",")
+	}
+
+	isDefault, defaultEndpoint := platform.GetObservabilityHealthEndpoints()
+	if isDefault && existingEndpoint != "" {
+		return []string{existingEndpoint}
+	}
+
+	return defaultEndpoint
 }
 
 //nolint:nestif

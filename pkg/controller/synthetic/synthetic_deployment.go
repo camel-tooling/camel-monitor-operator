@@ -88,7 +88,7 @@ func (app *nonManagedCamelDeployment) GetAnnotations() map[string]string {
 }
 
 // GetPods returns the pods backing the Camel application.
-func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Client) ([]v1alpha1.PodInfo, error) {
+func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error) {
 	var cpuLimitString string
 
 	cpuCoreLimit := kubernetes.GetResourcesLimitInMillis(app.GetResourcesLimits(), corev1.ResourceCPU)
@@ -96,14 +96,8 @@ func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Clie
 		cpuLimitString = strconv.FormatInt(int64(cpuCoreLimit), 10)
 	}
 
-	obsConf := appObservabilityConf{
-		port:            getObservabilityPort(app.GetAnnotations()),
-		metricsEndpoint: getObservabilityMetricsEndpoint(app.GetAnnotations()),
-		healthEndpoint:  getObservabilityHealthEndpoints(app.GetAnnotations()),
-	}
-
 	return getPods(*app.httpClient, ctx, c, app.deploy.GetNamespace(),
-		app.GetMatchLabelsSelector(), obsConf, true, &cpuLimitString)
+		app.GetMatchLabelsSelector(), conf, true, &cpuLimitString)
 }
 
 // GetMatchLabelsSelector returns the labels selector used to select Pods belonging to the backing application.

@@ -189,7 +189,7 @@ type NonManagedCamelMonitorlicationAdapter interface {
 	// GetReplicas returns the number of desired replicas for the backing Camel application.
 	GetReplicas() *int32
 	// GetPods returns the actual Pods backing the Camel application.
-	GetPods(ctx context.Context, c client.Client) ([]v1alpha1.PodInfo, error)
+	GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error)
 	// GetAnnotations returns the backing deployment object annotations.
 	GetAnnotations() map[string]string
 	// GetMatchLabelsSelector returns the labels selector used to select Pods belonging to the backing application.

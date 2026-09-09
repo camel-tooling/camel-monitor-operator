@@ -77,22 +77,32 @@ func TestGetPollingInterval(t *testing.T) {
 	assert.Equal(t, 30*time.Second, GetPollingInterval())
 }
 
-func TestGetObservabilityPort_Default(t *testing.T) {
-	t.Setenv(CamelMonitorObservabilityPort, "")
+func TestGetObservabilityHealthPort_Default(t *testing.T) {
+	t.Setenv(CamelMonitorObservabilityHealthPort, "")
+	isDefault, val := GetObservabilityHealthPort()
+	assert.True(t, isDefault)
+	assert.Equal(t, DefaultObservabilityPort, val)
+}
 
-	assert.Equal(t, defaultObservabilityPort, GetObservabilityPort())
+func TestGetObservabilityMetricsPort_Default(t *testing.T) {
+	t.Setenv(CamelMonitorObservabilityMetricsPort, "")
+	isDefault, val := GetObservabilityMetricsPort()
+	assert.True(t, isDefault)
+	assert.Equal(t, DefaultObservabilityPort, val)
 }
 
 func TestGetObservabilityMetrics_Default(t *testing.T) {
 	t.Setenv(CamelMonitorObservabilityMetrics, "")
-
-	assert.Equal(t, defaultObservabilityMetrics, GetObservabilityMetricsEndpoints())
+	isDefault, val := GetObservabilityMetricsEndpoints()
+	assert.True(t, isDefault)
+	assert.Equal(t, DefaultObservabilityMetrics, val)
 }
 
 func TestGetObservabilityHealth_Default(t *testing.T) {
 	t.Setenv(CamelMonitorObservabilityHealth, "")
-
-	assert.Equal(t, defaultObservabilityHealth, GetObservabilityHealthEndpoints())
+	isDefault, val := GetObservabilityHealthEndpoints()
+	assert.True(t, isDefault)
+	assert.Equal(t, DefaultObservabilityHealth, val)
 }
 
 func TestSLIThresholds(t *testing.T) {

@@ -81,17 +81,11 @@ func (app *nonManagedCamelCronjob) GetAppImage() string {
 }
 
 // GetPods returns the pods backing the Camel application.
-func (app *nonManagedCamelCronjob) GetPods(ctx context.Context, c client.Client) ([]v1alpha1.PodInfo, error) {
+func (app *nonManagedCamelCronjob) GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error) {
 	// In the CronJob case we don't want to inspect the Pod as we are not sure we have the Pod live when
 	// the monitoring happens.
-	obsConf := appObservabilityConf{
-		port:            getObservabilityPort(app.GetAnnotations()),
-		metricsEndpoint: getObservabilityMetricsEndpoint(app.GetAnnotations()),
-		healthEndpoint:  getObservabilityHealthEndpoints(app.GetAnnotations()),
-	}
-
 	return getPods(*app.httpClient, ctx, c, app.cron.GetNamespace(),
-		app.GetMatchLabelsSelector(), obsConf, false, nil)
+		app.GetMatchLabelsSelector(), conf, false, nil)
 }
 
 // GetAnnotations returns the backing deployment object annotations.

@@ -34,8 +34,10 @@ const (
 	MonitorImportedNameLabel = camelPrefix + "/imported-from-name"
 	// MonitorPollingIntervalSecondsAnnotation is used to instruct a given application to poll interval.
 	MonitorPollingIntervalSecondsAnnotation = camelPrefix + "/polling-interval-seconds"
-	// MonitorObservabilityServicesPort is used to instruct an application to use a specific port for metrics scraping.
-	MonitorObservabilityServicesPort = camelPrefix + "/observability-services-port"
+	// MonitorObservabilityServicesHealthPort is used to instruct an application to use a specific port for health scraping.
+	MonitorObservabilityServicesHealthPort = camelPrefix + "/health-port"
+	// MonitorObservabilityServicesMetricsPort is used to instruct an application to use a specific port for metrics scraping.
+	MonitorObservabilityServicesMetricsPort = camelPrefix + "/metrics-port"
 	// MonitorObservabilityServicesMetricsEndpoint is used to instruct an application to use specific endpoints (comma separated) for metrics scraping.
 	MonitorObservabilityServicesMetricsEndpoint = camelPrefix + "/metrics-endpoints"
 	// MonitorObservabilityServicesHealthEndpoint is used to instruct an application to use a specific endpoints (comma separated) for health scraping.

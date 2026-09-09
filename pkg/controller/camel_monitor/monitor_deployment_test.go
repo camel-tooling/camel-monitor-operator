@@ -243,7 +243,8 @@ func TestMonitorActionDeploymentPodsRunning(t *testing.T) {
 			Namespace: "default",
 			Annotations: map[string]string{
 				// Use the mock server for testing purposes
-				v1alpha1.MonitorObservabilityServicesPort: portStr,
+				v1alpha1.MonitorObservabilityServicesHealthPort:  portStr,
+				v1alpha1.MonitorObservabilityServicesMetricsPort: portStr,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{

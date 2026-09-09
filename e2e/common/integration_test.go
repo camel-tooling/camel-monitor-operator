@@ -224,7 +224,7 @@ func isCamelMonitorHealthStatusUP(s v1alpha1.CamelMonitorStatus) bool {
 		return false
 	}
 
-	if s.Pods[0].Runtime.Status != "UP" {
+	if s.Pods[0].Runtime == nil || s.Pods[0].Runtime.Status != "UP" {
 		return false
 	}
 
