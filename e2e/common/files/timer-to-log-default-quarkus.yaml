@@ -35,5 +35,5 @@ spec:
     builder:
       # Workaround while https://github.com/apache/camel-k/issues/6800 is available
       properties:
-      - quarkus.smallrye-health.root-path = /q
-      - quarkus.micrometer.export.prometheus.path = /q
+      - quarkus.smallrye-health.root-path = /q/health
+      - quarkus.micrometer.export.prometheus.path = /q/metrics

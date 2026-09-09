@@ -51,8 +51,8 @@ const (
 	defaultSLIExchangeWarningPercentage     = 10
 	CamelMonitorObservabilityPort           = "OBSERVABILITY_PORT"
 	defaultObservabilityPort            int = 9876
-	CamelMonitorObservabilityMetrics        = "OBSERVABILITY_METRICS_ENDPOINT"
-	CamelMonitorObservabilityHealth         = "OBSERVABILITY_HEALTH_ENDPOINT"
+	CamelMonitorObservabilityMetrics        = "OBSERVABILITY_METRICS_ENDPOINTS"
+	CamelMonitorObservabilityHealth         = "OBSERVABILITY_HEALTH_ENDPOINTS"
 	defaultGrafanaDatasource                = "prometheus"
 	defaultMaxIdleSec                   int = 60
 
@@ -200,19 +200,19 @@ func GetObservabilityPort() int {
 	return getOperatorEnvAsInt(CamelMonitorObservabilityPort, "observability port configuration", defaultObservabilityPort)
 }
 
-// GetObservabilityMetricsEndpoint returns the endpoint configured for the Prometheus metrics.
-func GetObservabilityMetricsEndpoint() []string {
-	if observabilityMetricsEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetrics); envSet && observabilityMetricsEndpointnvVar != "" {
-		return []string{observabilityMetricsEndpointnvVar}
+// GetObservabilityMetricsEndpoints returns the endpoint configured for the Prometheus metrics.
+func GetObservabilityMetricsEndpoints() []string {
+	if observabilityMetricsEndpointEnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetrics); envSet && observabilityMetricsEndpointEnvVar != "" {
+		return strings.Split(observabilityMetricsEndpointEnvVar, ",")
 	}
 
 	return defaultObservabilityMetrics
 }
 
-// GetObservabilityHealthEndpoint returns the endpoint configured for the health service.
-func GetObservabilityHealthEndpoint() []string {
-	if observabilityHealthEndpointnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityHealth); envSet && observabilityHealthEndpointnvVar != "" {
-		return []string{observabilityHealthEndpointnvVar}
+// GetObservabilityHealthEndpoints returns the endpoint configured for the health service.
+func GetObservabilityHealthEndpoints() []string {
+	if observabilityHealthEndpointEnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityHealth); envSet && observabilityHealthEndpointEnvVar != "" {
+		return strings.Split(observabilityHealthEndpointEnvVar, ",")
 	}
 
 	return defaultObservabilityHealth

@@ -86,13 +86,13 @@ func TestGetObservabilityPort_Default(t *testing.T) {
 func TestGetObservabilityMetrics_Default(t *testing.T) {
 	t.Setenv(CamelMonitorObservabilityMetrics, "")
 
-	assert.Equal(t, defaultObservabilityMetrics, GetObservabilityMetricsEndpoint())
+	assert.Equal(t, defaultObservabilityMetrics, GetObservabilityMetricsEndpoints())
 }
 
 func TestGetObservabilityHealth_Default(t *testing.T) {
 	t.Setenv(CamelMonitorObservabilityHealth, "")
 
-	assert.Equal(t, defaultObservabilityHealth, GetObservabilityHealthEndpoint())
+	assert.Equal(t, defaultObservabilityHealth, GetObservabilityHealthEndpoints())
 }
 
 func TestSLIThresholds(t *testing.T) {

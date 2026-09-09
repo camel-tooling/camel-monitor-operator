@@ -27,6 +27,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	v1alpha1 "github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
@@ -165,14 +166,14 @@ func getObservabilityPort(appAnnotations map[string]string) int {
 }
 
 func getObservabilityMetricsEndpoint(appAnnotations map[string]string) []string {
-	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoint()
+	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoints()
 	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint] == "" {
 		return defaultMetricsEndpoint
 	}
 
-	metricsEndpoint := appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint]
-	if metricsEndpoint != "" {
-		return []string{metricsEndpoint}
+	metricsEndpoints := appAnnotations[v1alpha1.MonitorObservabilityServicesMetricsEndpoint]
+	if metricsEndpoints != "" {
+		return strings.Split(metricsEndpoints, ",")
 	} else {
 		log.Info("could not properly parse application observability services metrics endpoint configuration, "+
 			"fallback to default operator value %d", defaultMetricsEndpoint)
@@ -182,14 +183,14 @@ func getObservabilityMetricsEndpoint(appAnnotations map[string]string) []string 
 }
 
 func getObservabilityHealthEndpoints(appAnnotations map[string]string) []string {
-	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoint()
+	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoints()
 	if appAnnotations == nil || appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint] == "" {
 		return defaultHealthEndpoint
 	}
 
-	healthEndpoint := appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint]
-	if healthEndpoint != "" {
-		return []string{healthEndpoint}
+	healthEndpoints := appAnnotations[v1alpha1.MonitorObservabilityServicesHealthEndpoint]
+	if healthEndpoints != "" {
+		return strings.Split(healthEndpoints, ",")
 	} else {
 		log.Info("could not properly parse application observability services health endpoint configuration, "+
 			"fallback to default operator value %d", defaultHealthEndpoint)

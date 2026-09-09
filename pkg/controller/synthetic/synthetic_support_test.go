@@ -383,7 +383,7 @@ func TestGetObservabilityPort(t *testing.T) {
 }
 
 func TestGetObservabilityMetrics(t *testing.T) {
-	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoint()
+	defaultMetricsEndpoint := platform.GetObservabilityMetricsEndpoints()
 
 	tests := []struct {
 		name        string
@@ -425,7 +425,7 @@ func TestGetObservabilityMetrics(t *testing.T) {
 }
 
 func TestGetObservabilityHealth(t *testing.T) {
-	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoint()
+	defaultHealthEndpoint := platform.GetObservabilityHealthEndpoints()
 
 	tests := []struct {
 		name        string
