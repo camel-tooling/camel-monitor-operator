@@ -34,10 +34,10 @@ const (
 	MonitorImportedNameLabel = camelPrefix + "/imported-from-name"
 	// MonitorPollingIntervalSecondsAnnotation is used to instruct a given application to poll interval.
 	MonitorPollingIntervalSecondsAnnotation = camelPrefix + "/polling-interval-seconds"
-	// MonitorObservabilityServicesHealthPort is used to instruct an application to use a specific port for health scraping.
-	MonitorObservabilityServicesHealthPort = camelPrefix + "/health-port"
-	// MonitorObservabilityServicesMetricsPort is used to instruct an application to use a specific port for metrics scraping.
-	MonitorObservabilityServicesMetricsPort = camelPrefix + "/metrics-port"
+	// MonitorObservabilityServicesHealthPorts is used to instruct an application to use specific ports (comma separated) for health scraping.
+	MonitorObservabilityServicesHealthPorts = camelPrefix + "/health-ports"
+	// MonitorObservabilityServicesMetricsPorts is used to instruct an application to use specific ports (comma separated) for metrics scraping.
+	MonitorObservabilityServicesMetricsPorts = camelPrefix + "/metrics-ports"
 	// MonitorObservabilityServicesMetricsEndpoint is used to instruct an application to use specific endpoints (comma separated) for metrics scraping.
 	MonitorObservabilityServicesMetricsEndpoint = camelPrefix + "/metrics-endpoints"
 	// MonitorObservabilityServicesHealthEndpoint is used to instruct an application to use a specific endpoints (comma separated) for health scraping.
@@ -93,7 +93,7 @@ func (cmonStatus *CamelMonitorStatus) DoesExposeMetrics() bool {
 	return len(cmonStatus.Pods) > 0 &&
 		cmonStatus.Pods[0].ObservabilityService != nil &&
 		cmonStatus.Pods[0].ObservabilityService.MetricsEndpoint != "" &&
-		cmonStatus.Pods[0].ObservabilityService.MetricsPort != 0
+		cmonStatus.Pods[0].ObservabilityService.MetricsPort != ""
 }
 
 // GetOwnerReferences returns the owner references to this app.

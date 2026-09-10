@@ -22,7 +22,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -66,7 +65,7 @@ func TestSetHealthHttpError(t *testing.T) {
 	defer server.Close()
 
 	podInfo := &v1alpha1.PodInfo{}
-	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", 0, []string{"/health"})
+	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", []string{"0"}, []string{"/health"})
 	require.Error(t, err)
 }
 
@@ -84,10 +83,7 @@ func TestSetHealthStatusOK(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, []string{"/health"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/health"})
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -108,10 +104,7 @@ func TestSetHealthStatus503(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, []string{"/health"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/health"})
 	require.NoError(t, err)
 
 	require.Equal(t, "Degraded", podInfo.Runtime.Status)
@@ -131,10 +124,7 @@ func TestSetHealthStatusNotFound(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, []string{"/health"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/health"})
 	require.Error(t, err)
 	assert.Equal(t, "no valid health endpoint found", err.Error())
 }
@@ -159,10 +149,7 @@ func TestSetHealthStatusAlternative(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, port, []string{"observe/live", "q/live"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"observe/live", "q/live"})
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -207,15 +194,12 @@ camel_exchanges_last_timestamp 123456
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
 	require.Equal(t, "/metrics", podInfo.ObservabilityService.MetricsEndpoint)
-	require.Equal(t, port, podInfo.ObservabilityService.MetricsPort)
+	require.Equal(t, portStr, podInfo.ObservabilityService.MetricsPort)
 
 	// Verify runtime + exchange initialized
 	require.NotNil(t, podInfo.Runtime)
@@ -250,10 +234,7 @@ func TestSetMetricsMissing(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.Error(t, err)
 	assert.Equal(t, "no valid metrics endpoint found", err.Error())
 }
@@ -299,15 +280,12 @@ camel_exchanges_last_timestamp 123456
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"metrics", "q/metrics", "actuator/prometheus"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"metrics", "q/metrics", "actuator/prometheus"})
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
 	require.Equal(t, "actuator/prometheus", podInfo.ObservabilityService.MetricsEndpoint)
-	require.Equal(t, port, podInfo.ObservabilityService.MetricsPort)
+	require.Equal(t, portStr, podInfo.ObservabilityService.MetricsPort)
 
 	// Verify runtime + exchange initialized
 	require.NotNil(t, podInfo.Runtime)
@@ -332,22 +310,19 @@ func TestSetMetricsStatusNotOK(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "HTTP status not OK")
 }
 
 func TestGetObservabilityHealthPort(t *testing.T) {
-	_, defaultPort := platform.GetObservabilityHealthPort()
+	_, defaultPort := platform.GetObservabilityHealthPorts()
 
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    int
-		existing    int
+		expected    []string
+		existing    string
 	}{
 		{
 			name:        "nil annotations",
@@ -362,40 +337,33 @@ func TestGetObservabilityHealthPort(t *testing.T) {
 		{
 			name: "valid port",
 			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesHealthPort: "9090",
+				v1alpha1.MonitorObservabilityServicesHealthPorts: "9090",
 			},
-			expected: 9090,
-		},
-		{
-			name: "invalid port",
-			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesHealthPort: "not-a-number",
-			},
-			expected: defaultPort,
+			expected: []string{"9090"},
 		},
 		{
 			name:     "existing port",
-			expected: 8888,
-			existing: 8888,
+			expected: []string{"8888"},
+			existing: "8888",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port := getObservabilityHealthPort(tt.annotations, tt.existing)
+			port := getObservabilityHealthPorts(tt.annotations, tt.existing)
 			assert.Equal(t, tt.expected, port)
 		})
 	}
 }
 
 func TestGetObservabilityMetricsPort(t *testing.T) {
-	_, defaultPort := platform.GetObservabilityMetricsPort()
+	_, defaultPort := platform.GetObservabilityMetricsPorts()
 
 	tests := []struct {
 		name        string
 		annotations map[string]string
-		expected    int
-		existing    int
+		expected    []string
+		existing    string
 	}{
 		{
 			name:        "nil annotations",
@@ -410,27 +378,20 @@ func TestGetObservabilityMetricsPort(t *testing.T) {
 		{
 			name: "valid port",
 			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesMetricsPort: "9090",
+				v1alpha1.MonitorObservabilityServicesMetricsPorts: "9090",
 			},
-			expected: 9090,
-		},
-		{
-			name: "invalid port",
-			annotations: map[string]string{
-				v1alpha1.MonitorObservabilityServicesMetricsPort: "not-a-number",
-			},
-			expected: defaultPort,
+			expected: []string{"9090"},
 		},
 		{
 			name:     "existing port",
-			expected: 8888,
-			existing: 8888,
+			expected: []string{"8888"},
+			existing: "8888",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port := getObservabilityMetricsPort(tt.annotations, tt.existing)
+			port := getObservabilityMetricsPorts(tt.annotations, tt.existing)
 			assert.Equal(t, tt.expected, port)
 		})
 	}
@@ -555,10 +516,10 @@ func TestInspectPods(t *testing.T) {
 	}
 	// Use localhost with a wrong port to simulate failure
 	conf := appObservabilityConf{
-		HealthPort:      -1,
-		MetricsPort:     -1,
-		MetricsEndpoint: []string{"/metrics"},
-		HealthEndpoint:  []string{"/health"},
+		HealthPorts:      []string{"-1"},
+		MetricsPorts:     []string{"-1"},
+		MetricsEndpoints: []string{"/metrics"},
+		HealthEndpoints:  []string{"/health"},
 	}
 	inspectPod(t.Context(), httpClient, pod, podInfo, "127.0.0.1", conf, nil)
 
@@ -607,10 +568,10 @@ func TestGetPodsWithInspectionFailure(t *testing.T) {
 	require.NoError(t, err)
 
 	conf := appObservabilityConf{
-		HealthPort:      -1,
-		MetricsPort:     -1,
-		MetricsEndpoint: []string{"/metrics"},
-		HealthEndpoint:  []string{"/health"},
+		HealthPorts:      []string{"-1"},
+		MetricsPorts:     []string{"-1"},
+		MetricsEndpoints: []string{"/metrics"},
+		HealthEndpoints:  []string{"/health"},
 	}
 	podsInfo, err := getPods(http.Client{}, context.Background(), fakeClient, "default",
 		map[string]string{"app": "test"}, conf, true, nil)
@@ -667,10 +628,7 @@ jvm_memory_used_bytes{area="nonheap",id="Metaspace"} 5.7801568E7
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.NoError(t, err)
 
 	assert.Equal(t, "14", *podInfo.ProcessCPUUsed)
@@ -711,10 +669,7 @@ jvm_memory_used_bytes{area="heap",id="G1 Survivor Space"} 2081872.0
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.NoError(t, err)
 
 	assert.True(t, podInfo.HasMemoryPressure)
@@ -742,10 +697,7 @@ process_cpu_usage 0.1
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	port, err := strconv.Atoi(portStr)
-	require.NoError(t, err)
-
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, port, []string{"/metrics"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{portStr}, []string{"/metrics"})
 	require.NoError(t, err)
 	// value is in millicores
 	err = setCPUPressure(podInfo, ptr.To("500"))
@@ -779,16 +731,16 @@ func TestGetAppObservabilityConf(t *testing.T) {
 		name string
 		cmon *v1alpha1.CamelMonitor
 
-		wantHealthPort      int
-		wantMetricsPort     int
+		wantHealthPort      []string
+		wantMetricsPort     []string
 		wantMetricsEndpoint []string
 		wantHealthEndpoint  []string
 	}{
 		{
 			name:                "no pods",
 			cmon:                &v1alpha1.CamelMonitor{},
-			wantHealthPort:      platform.DefaultObservabilityPort,
-			wantMetricsPort:     platform.DefaultObservabilityPort,
+			wantHealthPort:      platform.DefaultObservabilityPorts,
+			wantMetricsPort:     platform.DefaultObservabilityPorts,
 			wantMetricsEndpoint: platform.DefaultObservabilityMetrics,
 			wantHealthEndpoint:  platform.DefaultObservabilityHealth,
 		},
@@ -803,8 +755,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 					},
 				},
 			},
-			wantHealthPort:      platform.DefaultObservabilityPort,
-			wantMetricsPort:     platform.DefaultObservabilityPort,
+			wantHealthPort:      platform.DefaultObservabilityPorts,
+			wantMetricsPort:     platform.DefaultObservabilityPorts,
 			wantMetricsEndpoint: platform.DefaultObservabilityMetrics,
 			wantHealthEndpoint:  platform.DefaultObservabilityHealth,
 		},
@@ -815,8 +767,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 					Pods: []v1alpha1.PodInfo{
 						{
 							ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
-								HealthPort:      8080,
-								MetricsPort:     9090,
+								HealthPort:      "8080",
+								MetricsPort:     "9090",
 								MetricsEndpoint: "/custom/metrics",
 								HealthEndpoint:  "/custom/health",
 							},
@@ -824,8 +776,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 					},
 				},
 			},
-			wantHealthPort:      8080,
-			wantMetricsPort:     9090,
+			wantHealthPort:      []string{"8080"},
+			wantMetricsPort:     []string{"9090"},
 			wantMetricsEndpoint: []string{"/custom/metrics"},
 			wantHealthEndpoint:  []string{"/custom/health"},
 		},
@@ -834,8 +786,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 			cmon: &v1alpha1.CamelMonitor{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						v1alpha1.MonitorObservabilityServicesHealthPort:      "1234",
-						v1alpha1.MonitorObservabilityServicesMetricsPort:     "4321",
+						v1alpha1.MonitorObservabilityServicesHealthPorts:     "1234",
+						v1alpha1.MonitorObservabilityServicesMetricsPorts:    "4321",
 						v1alpha1.MonitorObservabilityServicesHealthEndpoint:  "/my-app-health",
 						v1alpha1.MonitorObservabilityServicesMetricsEndpoint: "/my-app-metrics",
 					},
@@ -844,8 +796,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 					Pods: []v1alpha1.PodInfo{
 						{
 							ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
-								HealthPort:      8080,
-								MetricsPort:     9090,
+								HealthPort:      "8080",
+								MetricsPort:     "9090",
 								MetricsEndpoint: "/status/metrics",
 								HealthEndpoint:  "/health",
 							},
@@ -853,8 +805,8 @@ func TestGetAppObservabilityConf(t *testing.T) {
 					},
 				},
 			},
-			wantHealthPort:      1234,
-			wantMetricsPort:     4321,
+			wantHealthPort:      []string{"1234"},
+			wantMetricsPort:     []string{"4321"},
 			wantMetricsEndpoint: []string{"/my-app-metrics"},
 			wantHealthEndpoint:  []string{"/my-app-health"},
 		},
@@ -864,10 +816,10 @@ func TestGetAppObservabilityConf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetAppObservabilityConf(tt.cmon)
 
-			assert.Equal(t, tt.wantHealthPort, got.HealthPort)
-			assert.Equal(t, tt.wantMetricsPort, got.MetricsPort)
-			assert.Equal(t, tt.wantMetricsEndpoint, got.MetricsEndpoint)
-			assert.Equal(t, tt.wantHealthEndpoint, got.HealthEndpoint)
+			assert.Equal(t, tt.wantHealthPort, got.HealthPorts)
+			assert.Equal(t, tt.wantMetricsPort, got.MetricsPorts)
+			assert.Equal(t, tt.wantMetricsEndpoint, got.MetricsEndpoints)
+			assert.Equal(t, tt.wantHealthEndpoint, got.HealthEndpoints)
 		})
 	}
 }

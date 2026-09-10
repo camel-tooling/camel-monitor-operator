@@ -163,9 +163,14 @@ func TestVerifyQuarkusDefaultAlternativeEndpoints(t *testing.T) {
 				WithTransform(
 					func(s v1alpha1.CamelMonitorStatus) bool {
 						isUp := isCamelMonitorHealthStatusUP(s)
-						quarkusHealthEndpoint := len(s.Pods) > 0 && s.Pods[0].ObservabilityService.HealthEndpoint == "q/health"
+						quarkusHealthEndpoint := len(s.Pods) > 0 &&
+							s.Pods[0].ObservabilityService != nil &&
+							s.Pods[0].ObservabilityService.HealthEndpoint == "q/health"
+						quarkusHealthPort := len(s.Pods) > 0 &&
+							s.Pods[0].ObservabilityService != nil &&
+							s.Pods[0].ObservabilityService.HealthPort == "8080"
 
-						return isUp && quarkusHealthEndpoint
+						return isUp && quarkusHealthPort && quarkusHealthEndpoint
 					},
 					BeTrue(),
 				),
@@ -178,9 +183,13 @@ func TestVerifyQuarkusDefaultAlternativeEndpoints(t *testing.T) {
 				WithTransform(
 					func(s v1alpha1.CamelMonitorStatus) bool {
 						isHealthy := isCamelMonitorMetricsHealthy(s)
-						quarkusMetricsEndpoint := len(s.Pods) > 0 && s.Pods[0].ObservabilityService.MetricsEndpoint == "q/metrics"
+						quarkusMetricsEndpoint := len(s.Pods) > 0 &&
+							s.Pods[0].ObservabilityService != nil &&
+							s.Pods[0].ObservabilityService.MetricsEndpoint == "q/metrics"
+						quarkusMetricsPort := len(s.Pods) > 0 &&
+							s.Pods[0].ObservabilityService != nil && s.Pods[0].ObservabilityService.MetricsPort == "8080"
 
-						return isHealthy && quarkusMetricsEndpoint
+						return isHealthy && quarkusMetricsPort && quarkusMetricsEndpoint
 					},
 					BeTrue(),
 				),

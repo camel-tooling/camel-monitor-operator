@@ -43,19 +43,18 @@ const (
 
 	CamelMonitorLabelSelector = "LABEL_SELECTOR"
 
-	CamelMonitorPollIntervalSeconds          = "POLL_INTERVAL_SECONDS"
-	DefaultPollingIntervalSeconds            = 60
-	SLIExchangeErrorPercentage               = "SLI_ERR_PERCENTAGE"
-	defaultSLIExchangeErrorPercentage        = 5
-	SLIExchangeWarningPercentage             = "SLI_WARN_PERCENTAGE"
-	defaultSLIExchangeWarningPercentage      = 10
-	CamelMonitorObservabilityHealthPort      = "OBSERVABILITY_HEALTH_PORT"
-	CamelMonitorObservabilityMetricsPort     = "OBSERVABILITY_METRICS_PORT"
-	DefaultObservabilityPort             int = 9876
-	CamelMonitorObservabilityMetrics         = "OBSERVABILITY_METRICS_ENDPOINTS"
-	CamelMonitorObservabilityHealth          = "OBSERVABILITY_HEALTH_ENDPOINTS"
-	defaultGrafanaDatasource                 = "prometheus"
-	defaultMaxIdleSec                    int = 60
+	CamelMonitorPollIntervalSeconds           = "POLL_INTERVAL_SECONDS"
+	DefaultPollingIntervalSeconds             = 60
+	SLIExchangeErrorPercentage                = "SLI_ERR_PERCENTAGE"
+	defaultSLIExchangeErrorPercentage         = 5
+	SLIExchangeWarningPercentage              = "SLI_WARN_PERCENTAGE"
+	defaultSLIExchangeWarningPercentage       = 10
+	CamelMonitorObservabilityHealthPorts      = "OBSERVABILITY_HEALTH_PORTS"
+	CamelMonitorObservabilityMetricsPorts     = "OBSERVABILITY_METRICS_PORTS"
+	CamelMonitorObservabilityMetrics          = "OBSERVABILITY_METRICS_ENDPOINTS"
+	CamelMonitorObservabilityHealth           = "OBSERVABILITY_HEALTH_ENDPOINTS"
+	defaultGrafanaDatasource                  = "prometheus"
+	defaultMaxIdleSec                     int = 60
 
 	OperatorLockName = "camel-monitor-lock"
 )
@@ -68,6 +67,8 @@ var (
 	DefaultObservabilityHealth = []string{"observe/health", "q/health", "actuator/health"}
 	// DefaultObservabilityMetrics priority endpoints: camel opinionated convention, quarkus and spring boot respectively.
 	DefaultObservabilityMetrics = []string{"observe/metrics", "q/metrics", "actuator/prometheus"}
+	// DefaultObservabilityPorts priority ports: camel opinionated convention and quarkus/spring boot respectively.
+	DefaultObservabilityPorts = []string{"9876", "8080"}
 )
 
 // IsCurrentOperatorGlobal returns true if the operator is configured to watch all namespaces.
@@ -197,18 +198,22 @@ func GetPollingInterval() time.Duration {
 	return time.Duration(getPollingIntervalSeconds()) * time.Second
 }
 
-// GetObservabilityHealthPort returns the observability health port set for the operator. It fallbacks to default value.
-func GetObservabilityHealthPort() (bool, int) {
-	val := getOperatorEnvAsInt(CamelMonitorObservabilityHealthPort, "observability health port configuration", DefaultObservabilityPort)
+// GetObservabilityHealthPorts returns the observability health port set for the operator. It fallbacks to default value.
+func GetObservabilityHealthPorts() (bool, []string) {
+	if observabilityHealthPortsEnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityHealthPorts); envSet && observabilityHealthPortsEnvVar != "" {
+		return false, strings.Split(observabilityHealthPortsEnvVar, ",")
+	}
 
-	return val == DefaultObservabilityPort, val
+	return true, DefaultObservabilityPorts
 }
 
-// GetObservabilityMetricsPort returns the observability metrics port set for the operator. It fallbacks to default value.
-func GetObservabilityMetricsPort() (bool, int) {
-	val := getOperatorEnvAsInt(CamelMonitorObservabilityMetricsPort, "observability metrics port configuration", DefaultObservabilityPort)
+// GetObservabilityMetricsPorts returns the observability metrics port set for the operator. It fallbacks to default value.
+func GetObservabilityMetricsPorts() (bool, []string) {
+	if observabilityMetricsPortsEnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetricsPorts); envSet && observabilityMetricsPortsEnvVar != "" {
+		return false, strings.Split(observabilityMetricsPortsEnvVar, ",")
+	}
 
-	return val == DefaultObservabilityPort, val
+	return true, DefaultObservabilityPorts
 }
 
 // GetObservabilityMetricsEndpoints returns if the endpoint is the default one and the configured for the Prometheus metrics.

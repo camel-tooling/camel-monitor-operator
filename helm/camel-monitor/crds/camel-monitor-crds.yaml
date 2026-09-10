@@ -205,13 +205,13 @@ spec:
                           type: string
                         healthPort:
                           description: the health port
-                          type: integer
+                          type: string
                         metricsEndpoint:
                           description: the metrics endpoint
                           type: string
                         metricsPort:
                           description: the metrics port
-                          type: integer
+                          type: string
                       type: object
                     processCPUMax:
                       description: How much CPU (in millicores) the process is allowed

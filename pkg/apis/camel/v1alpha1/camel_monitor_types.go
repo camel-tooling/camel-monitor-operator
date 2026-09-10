@@ -157,11 +157,11 @@ type ObservabilityServiceInfo struct {
 	// the health endpoint
 	HealthEndpoint string `json:"healthEndpoint,omitempty"`
 	// the health port
-	HealthPort int `json:"healthPort,omitempty"`
+	HealthPort string `json:"healthPort,omitempty"`
 	// the metrics endpoint
 	MetricsEndpoint string `json:"metricsEndpoint,omitempty"`
 	// the metrics port
-	MetricsPort int `json:"metricsPort,omitempty"`
+	MetricsPort string `json:"metricsPort,omitempty"`
 }
 
 // ExchangeInfo contains the endpoints that can be possibly used to scrape more information.
