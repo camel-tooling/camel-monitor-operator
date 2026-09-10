@@ -265,7 +265,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 	if err != nil {
 		// We don't return an error on purpose: the caller will try
 		// the next port.
-		log.Info("cannot connect to %s. Trying on another port if available", hostPort)
+		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
 		// Tell the caller to stop trying endpoints for this port.
 		return false, nil
@@ -279,7 +279,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Info("%s not found. Trying on another endpoint if available", endpoint)
+		log.Infof("%s not found. Trying on another endpoint if available", endpoint)
 
 		return false, nil
 	}
@@ -496,7 +496,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 	if err != nil {
 		// We don't return an error on purpose: the caller will try
 		// the next port.
-		log.Info("cannot connect to %s. Trying on another port if available", hostPort)
+		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
 		return false, nil
 	}
@@ -511,7 +511,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Info("%s not found. Trying on another endpoint if available", healthEndpoint)
+		log.Infof("%s not found. Trying on another endpoint if available", healthEndpoint)
 
 		return false, nil
 	}
