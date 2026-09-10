@@ -78,17 +78,17 @@ func TestGetPollingInterval(t *testing.T) {
 }
 
 func TestGetObservabilityHealthPort_Default(t *testing.T) {
-	t.Setenv(CamelMonitorObservabilityHealthPort, "")
-	isDefault, val := GetObservabilityHealthPort()
+	t.Setenv(CamelMonitorObservabilityHealthPorts, "")
+	isDefault, val := GetObservabilityHealthPorts()
 	assert.True(t, isDefault)
-	assert.Equal(t, DefaultObservabilityPort, val)
+	assert.Equal(t, DefaultObservabilityPorts, val)
 }
 
 func TestGetObservabilityMetricsPort_Default(t *testing.T) {
-	t.Setenv(CamelMonitorObservabilityMetricsPort, "")
-	isDefault, val := GetObservabilityMetricsPort()
+	t.Setenv(CamelMonitorObservabilityMetricsPorts, "")
+	isDefault, val := GetObservabilityMetricsPorts()
 	assert.True(t, isDefault)
-	assert.Equal(t, DefaultObservabilityPort, val)
+	assert.Equal(t, DefaultObservabilityPorts, val)
 }
 
 func TestGetObservabilityMetrics_Default(t *testing.T) {

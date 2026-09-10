@@ -42,7 +42,7 @@ func TestAddPrometheusPodMonitor_Success(t *testing.T) {
 				{
 					ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
 						MetricsEndpoint: "/metrics",
-						MetricsPort:     8080,
+						MetricsPort:     "8080",
 					},
 				},
 			},
@@ -166,7 +166,7 @@ func TestAddPrometheusPodMonitor_UpdateExisting(t *testing.T) {
 				{
 					ObservabilityService: &v1alpha1.ObservabilityServiceInfo{
 						MetricsEndpoint: "/metrics-new",
-						MetricsPort:     9090,
+						MetricsPort:     "9090",
 					},
 				},
 			},

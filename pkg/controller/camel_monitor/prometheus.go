@@ -19,7 +19,6 @@ package monitor
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
@@ -67,7 +66,7 @@ func addPrometheusPodMonitor(ctx context.Context, c client.Client, target *v1alp
 							{
 								SourceLabels: []monitoringv1.LabelName{"__meta_kubernetes_pod_ip"},
 								TargetLabel:  "__address__",
-								Replacement:  new("${1}:" + strconv.Itoa(metricsPortNumber)),
+								Replacement:  new("${1}:" + metricsPortNumber),
 							},
 						},
 					},
