@@ -52,6 +52,9 @@ type appObservabilityConf struct {
 	MetricsPorts     []string
 	MetricsEndpoints []string
 	HealthEndpoints  []string
+	// Namespace and Name identify the CamelMonitor being scraped, for log context.
+	Namespace string
+	Name      string
 }
 
 // getPods returns the pods backing the Camel application. You can provide an inspect flag to scrape health and metrics.
@@ -100,14 +103,14 @@ func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, po
 	obsConf appObservabilityConf, cpuLimit *string) {
 	podInfo.ObservabilityService = &v1alpha1.ObservabilityServiceInfo{}
 
-	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf.HealthPorts, obsConf.HealthEndpoints)
+	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf)
 	if err != nil {
 		reason := "Could not scrape health endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
 
-	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf.MetricsPorts, obsConf.MetricsEndpoints)
+	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf)
 	if err != nil {
 		reason := "Could not scrape metrics endpoint: " + err.Error()
 		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
@@ -174,6 +177,8 @@ func GetAppObservabilityConf(cmon *v1alpha1.CamelMonitor) appObservabilityConf {
 		MetricsPorts:     getObservabilityMetricsPorts(cmon.GetAnnotations(), existingMetricsPort),
 		MetricsEndpoints: getObservabilityMetricsEndpoint(cmon.GetAnnotations(), existingMetricsEndpoint),
 		HealthEndpoints:  getObservabilityHealthEndpoints(cmon.GetAnnotations(), existingHealthEndpoint),
+		Namespace:        cmon.Namespace,
+		Name:             cmon.Name,
 	}
 
 	return obsConf
@@ -232,12 +237,12 @@ func getObservabilityHealthEndpoints(appAnnotations map[string]string, existingE
 }
 
 func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	podIp string, ports []string, endpoints []string) error {
-	for _, port := range ports {
+	podIp string, obsConf appObservabilityConf) error {
+	for _, port := range obsConf.MetricsPorts {
 		hostPort := net.JoinHostPort(podIp, port)
 
-		for _, endpoint := range endpoints {
-			found, portWorks, err := collectMetrics(ctx, httpClient, podInfo, hostPort, port, endpoint)
+		for _, endpoint := range obsConf.MetricsEndpoints {
+			found, portWorks, err := collectMetrics(ctx, httpClient, podInfo, hostPort, port, endpoint, obsConf)
 			if err != nil {
 				return err
 			}
@@ -259,7 +264,7 @@ func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.P
 
 // will return endpoint success, port success, error.
 func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	hostPort string, port string, endpoint string) (bool, bool, error) {
+	hostPort string, port string, endpoint string, obsConf appObservabilityConf) (bool, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, endpoint), nil)
 	if err != nil {
 		return false, false, err
@@ -286,7 +291,8 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Infof("%s not found. Trying on another endpoint if available", endpoint)
+		log.Infof("CamelMonitor %s/%s: %s not found. Trying on another endpoint if available",
+			obsConf.Namespace, obsConf.Name, endpoint)
 
 		return false, true, nil
 	}
@@ -468,12 +474,12 @@ func accept(labelPair []*dto.LabelPair, labelName, labelValue string) bool {
 }
 
 func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	podIp string, ports []string, healthEndpoints []string) error {
-	for _, port := range ports {
+	podIp string, obsConf appObservabilityConf) error {
+	for _, port := range obsConf.HealthPorts {
 		hostPort := net.JoinHostPort(podIp, port)
 
-		for _, he := range healthEndpoints {
-			found, portWorks, err := checkHealthEndpoint(ctx, httpClient, podInfo, hostPort, port, he)
+		for _, he := range obsConf.HealthEndpoints {
+			found, portWorks, err := checkHealthEndpoint(ctx, httpClient, podInfo, hostPort, port, he, obsConf)
 			if err != nil {
 				return err
 			}
@@ -495,7 +501,7 @@ func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.Po
 
 // will return endpoint success, port success, error.
 func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	hostPort string, port string, healthEndpoint string) (bool, bool, error) {
+	hostPort string, port string, healthEndpoint string, obsConf appObservabilityConf) (bool, bool, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -525,7 +531,8 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Infof("%s not found. Trying on another endpoint if available", healthEndpoint)
+		log.Infof("CamelMonitor %s/%s: %s not found. Trying on another endpoint if available",
+			obsConf.Namespace, obsConf.Name, healthEndpoint)
 
 		return false, true, nil
 	}
