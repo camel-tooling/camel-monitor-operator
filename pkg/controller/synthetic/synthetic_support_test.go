@@ -823,3 +823,65 @@ func TestGetAppObservabilityConf(t *testing.T) {
 		})
 	}
 }
+
+func TestMetricsAlternativePort(t *testing.T) {
+	metricsPayload := `
+# HELP process_cpu_usage The "recent cpu usage" for the Java Virtual Machine process
+# TYPE process_cpu_usage gauge
+process_cpu_usage 0.1
+`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Contains(t, r.Header.Get("Accept"), "text/plain")
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(metricsPayload))
+	}))
+	defer server.Close()
+
+	podInfo := &v1alpha1.PodInfo{
+		ObservabilityService: &v1alpha1.ObservabilityServiceInfo{},
+	}
+
+	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	require.NoError(t, err)
+
+	// This call points to a non existing port, it must fail
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{"1234"}, []string{"/metrics"})
+	require.Error(t, err)
+	assert.Equal(t, "no valid metrics endpoint found", err.Error())
+
+	// This call points to a non existing port and an existing port, it must succeed
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host, []string{"1234", portStr}, []string{"/metrics"})
+	require.NoError(t, err)
+}
+
+func TestHealthAlternativePort(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/q/live":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"Healthy"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"status":"404 Not Found"}`))
+		}
+	}))
+	defer server.Close()
+
+	podInfo := &v1alpha1.PodInfo{
+		ObservabilityService: &v1alpha1.ObservabilityServiceInfo{},
+	}
+
+	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	require.NoError(t, err)
+
+	// This call points to a non existing port, it must fail
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{"1234"}, []string{"q/live"})
+	require.Error(t, err)
+	assert.Equal(t, "no valid health endpoint found", err.Error())
+
+	// This call points to a non existing port and an existing port, it must succeed
+	err = setHealth(t.Context(), *server.Client(), podInfo, host, []string{"1234", portStr}, []string{"q/live"})
+	require.NoError(t, err)
+}

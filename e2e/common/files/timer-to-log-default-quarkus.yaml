@@ -39,4 +39,4 @@ spec:
       properties:
       - quarkus.smallrye-health.root-path = /q/health
       - quarkus.micrometer.export.prometheus.path = /q/metrics
-      - quarkus.management.port=8080
+      - quarkus.management.enabled=false
