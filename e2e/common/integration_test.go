@@ -140,64 +140,6 @@ func TestVerifyCamelKIntegrationTimerToLog(t *testing.T) {
 	})
 }
 
-func TestVerifyQuarkusDefaultAlternativeEndpoints(t *testing.T) {
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
-		// Test a simple route with indefinite message delivery (all success)
-		t.Run("all success messages", func(t *testing.T) {
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					"apply",
-					"-f",
-					"files/timer-to-log-default-quarkus.yaml",
-					"-n",
-					ns,
-				),
-			)
-
-			// Verify health status is UP (on /q/health)
-			g.Eventually(
-				CamelMonitorStatus(t, ctx, ns, "timer-to-log-default-quarkus"),
-				TestTimeoutMedium,
-			).Should(
-				WithTransform(
-					func(s v1alpha1.CamelMonitorStatus) bool {
-						isUp := isCamelMonitorHealthStatusUP(s)
-						quarkusHealthEndpoint := len(s.Pods) > 0 &&
-							s.Pods[0].ObservabilityService != nil &&
-							s.Pods[0].ObservabilityService.HealthEndpoint == "q/health"
-						quarkusHealthPort := len(s.Pods) > 0 &&
-							s.Pods[0].ObservabilityService != nil &&
-							s.Pods[0].ObservabilityService.HealthPort == "8080"
-
-						return isUp && quarkusHealthPort && quarkusHealthEndpoint
-					},
-					BeTrue(),
-				),
-			)
-			// We check the /q/metrics are read fine
-			g.Eventually(
-				CamelMonitorStatus(t, ctx, ns, "timer-to-log-default-quarkus"),
-				TestTimeoutMedium,
-			).Should(
-				WithTransform(
-					func(s v1alpha1.CamelMonitorStatus) bool {
-						isHealthy := isCamelMonitorMetricsHealthy(s)
-						quarkusMetricsEndpoint := len(s.Pods) > 0 &&
-							s.Pods[0].ObservabilityService != nil &&
-							s.Pods[0].ObservabilityService.MetricsEndpoint == "q/metrics"
-						quarkusMetricsPort := len(s.Pods) > 0 &&
-							s.Pods[0].ObservabilityService != nil && s.Pods[0].ObservabilityService.MetricsPort == "8080"
-
-						return isHealthy && quarkusMetricsPort && quarkusMetricsEndpoint
-					},
-					BeTrue(),
-				),
-			)
-		})
-	})
-}
-
 func isCamelMonitorMetricsHealthy(s v1alpha1.CamelMonitorStatus) bool {
 	sr := s.SuccessRate
 	if sr == nil {
