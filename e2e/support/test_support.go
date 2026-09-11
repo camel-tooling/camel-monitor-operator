@@ -391,6 +391,8 @@ func MakeWithContext(t *testing.T, rule string, args ...string) *exec.Cmd {
 	return exec.Command("make", args...)
 }
 
+// These are the apps containing the camel-observability-services
+
 func CamelAppMain() string {
 	camelAppVersion := getCamelAppVersion()
 
@@ -407,6 +409,27 @@ func CamelAppSpringBoot() string {
 	camelAppVersion := getCamelAppVersion()
 
 	return "docker.io/squakez/db-app-sb:" + camelAppVersion
+}
+
+// These are the apps containing the regular camel metrics and health
+// as configured by default for each runtime
+
+func CamelRegularAppMain() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-regular-app-main:" + camelAppVersion
+}
+
+func CamelRegularAppQuarkus() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-regular-app-quarkus:" + camelAppVersion
+}
+
+func CamelRegularAppSpringBoot() string {
+	camelAppVersion := getCamelAppVersion()
+
+	return "docker.io/squakez/db-regular-app-sb:" + camelAppVersion
 }
 
 func getCamelAppVersion() string {

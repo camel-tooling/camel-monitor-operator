@@ -35,52 +35,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestVerifyDeploymentQuarkus(t *testing.T) {
-	testVerifyDeployment(t, CamelAppQuarkus())
+func TestVerifyAltDeploymentQuarkus(t *testing.T) {
+	testVerifyAltDeployment(t, CamelRegularAppQuarkus(), "8080", "q/health", "q/metrics")
 }
 
-func TestVerifyDeploymentSpringBoot(t *testing.T) {
-	testVerifyDeployment(t, CamelAppSpringBoot())
+func TestVerifyAltDeploymentSpringBoot(t *testing.T) {
+	testVerifyAltDeployment(t, CamelRegularAppSpringBoot(), "8080", "actuator/health", "actuator/prometheus")
 }
 
-func TestVerifyDeploymentMain(t *testing.T) {
-	testVerifyDeployment(t, CamelAppMain())
+func TestVerifyAltDeploymentMain(t *testing.T) {
+	testVerifyAltDeployment(t, CamelRegularAppMain(), "8080", "observe/health", "observe/metrics")
 }
 
-func TestVerifyDeploymentLabelInLabelOut(t *testing.T) {
+func testVerifyAltDeployment(t *testing.T, image string, expectedPort string, expectedHealthEndpoint string, expectedMetricsEndpoint string) {
 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
-		t.Run("simple Deployment", func(t *testing.T) {
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
-				),
-			)
-			g.Eventually(PodStatusPhase(t, ctx, ns, "app=camel-app"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
-			// Label in: the operator should discover
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
-				),
-			)
-			// The name of the selector, "camel.apache.org/monitor: camel-sample"
-			g.Eventually(CamelMonitor(t, ctx, ns, "camel-sample")).Should(Not(BeNil()))
-			// Label out: the operator has to remove the CR
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("label deployment camel-app camel.apache.org/monitor- -n "+ns, " ")...,
-				),
-			)
-			g.Eventually(CamelMonitor(t, ctx, ns, "camel-sample")).Should(BeNil())
-		})
-	})
-}
-
-func testVerifyDeployment(t *testing.T, image string) {
-	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
-		t.Run("simple Deployment", func(t *testing.T) {
+		t.Run("alternative Deployment", func(t *testing.T) {
 			ExpectExecSucceed(t, g,
 				exec.Command(
 					"kubectl",
@@ -131,38 +100,23 @@ func testVerifyDeployment(t *testing.T, image string) {
 					),
 				}),
 			)
-			// Scale up
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("scale deployment camel-app --replicas 2 -n "+ns, " ")...,
-				),
-			)
+
 			g.Eventually(
 				CamelMonitorStatus(t, ctx, ns, "camel-sample"),
+				TestTimeoutMedium,
 			).Should(
-				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-					"Replicas":    PointTo(Equal(int32(2))),
-					"SuccessRate": Not(BeNil()),
-				}),
-			)
-			// Scale to 0
-			ExpectExecSucceed(t, g,
-				exec.Command(
-					"kubectl",
-					strings.Split("scale deployment camel-app --replicas 0 -n "+ns, " ")...,
+				WithTransform(
+					func(s v1alpha1.CamelMonitorStatus) bool {
+						return len(s.Pods) > 0 && s.Pods[0].ObservabilityService != nil &&
+							s.Pods[0].ObservabilityService.MetricsPort == expectedPort &&
+							s.Pods[0].ObservabilityService.MetricsEndpoint == expectedMetricsEndpoint &&
+							s.Pods[0].ObservabilityService.HealthEndpoint == expectedHealthEndpoint
+
+					},
+					BeTrue(),
 				),
 			)
-			g.Eventually(
-				CamelMonitorStatus(t, ctx, ns, "camel-sample"),
-			).Should(
-				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhasePaused),
-					"Replicas":    PointTo(Equal(int32(0))),
-					"SuccessRate": Not(BeNil()),
-				}),
-			)
+
 			// Delete deployment
 			ExpectExecSucceed(t, g,
 				exec.Command(
