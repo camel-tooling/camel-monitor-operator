@@ -237,9 +237,15 @@ func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.P
 		hostPort := net.JoinHostPort(podIp, port)
 
 		for _, endpoint := range endpoints {
-			found, err := collectMetrics(ctx, httpClient, podInfo, hostPort, port, endpoint)
+			found, portWorks, err := collectMetrics(ctx, httpClient, podInfo, hostPort, port, endpoint)
 			if err != nil {
 				return err
+			}
+
+			if !portWorks {
+				// no reason to continue checking alternative endpoints,
+				// this port is not responding
+				break
 			}
 
 			if found {
@@ -251,11 +257,12 @@ func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.P
 	return errors.New("no valid metrics endpoint found")
 }
 
+// will return endpoint success, port success, error.
 func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	hostPort string, port string, endpoint string) (bool, error) {
+	hostPort string, port string, endpoint string) (bool, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, endpoint), nil)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	// Quarkus runtime specific, see https://github.com/apache/camel-quarkus/issues/7405
@@ -268,7 +275,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
 		// Tell the caller to stop trying endpoints for this port.
-		return false, nil
+		return false, false, nil
 	}
 	defer func() {
 		err := resp.Body.Close()
@@ -281,16 +288,16 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 		// Retry possible alternative endpoints.
 		log.Infof("%s not found. Trying on another endpoint if available", endpoint)
 
-		return false, nil
+		return false, true, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("HTTP status not OK, it was %d", resp.StatusCode)
+		return false, true, fmt.Errorf("HTTP status not OK, it was %d", resp.StatusCode)
 	}
 
 	metrics, err := parseMetrics(resp.Body)
 	if err != nil {
-		return false, err
+		return false, true, err
 	}
 
 	podInfo.ObservabilityService.MetricsEndpoint = endpoint
@@ -362,7 +369,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 		}
 	}
 
-	return true, nil
+	return true, true, nil
 }
 
 func parseMetrics(reader io.Reader) (map[string]*dto.MetricFamily, error) {
@@ -466,9 +473,15 @@ func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.Po
 		hostPort := net.JoinHostPort(podIp, port)
 
 		for _, he := range healthEndpoints {
-			found, err := checkHealthEndpoint(ctx, httpClient, podInfo, hostPort, port, he)
+			found, portWorks, err := checkHealthEndpoint(ctx, httpClient, podInfo, hostPort, port, he)
 			if err != nil {
 				return err
+			}
+
+			if !portWorks {
+				// no reason to continue checking alternative endpoints,
+				// this port is not responding
+				break
 			}
 
 			if found {
@@ -480,8 +493,9 @@ func setHealth(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.Po
 	return errors.New("no valid health endpoint found")
 }
 
+// will return endpoint success, port success, error.
 func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
-	hostPort string, port string, healthEndpoint string) (bool, error) {
+	hostPort string, port string, healthEndpoint string) (bool, bool, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -489,7 +503,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 		nil,
 	)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	resp, err := httpClient.Do(req)
@@ -498,7 +512,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 		// the next port.
 		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
-		return false, nil
+		return false, false, nil
 	}
 	defer func() {
 		err := resp.Body.Close()
@@ -513,7 +527,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 		// Retry possible alternative endpoints.
 		log.Infof("%s not found. Trying on another endpoint if available", healthEndpoint)
 
-		return false, nil
+		return false, true, nil
 	}
 
 	// The endpoint reports 503 when the service is down, but still
@@ -525,7 +539,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 
 		status, err = parseHealthStatus(resp.Body)
 		if err != nil {
-			return false, err
+			return false, true, err
 		}
 	}
 
@@ -536,7 +550,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 	}
 
 	// We found a working endpoint.
-	return true, nil
+	return true, true, nil
 }
 
 func parseHealthStatus(reader io.Reader) (string, error) {
