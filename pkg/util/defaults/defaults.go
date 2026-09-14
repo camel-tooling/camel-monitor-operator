@@ -26,6 +26,8 @@ const (
 	Version = "0.3.0-SNAPSHOT"
 	// BuildProvider -- .
 	BuildProvider = "Apache"
+	// DefaultMavenBaseRepo -- .
+	DefaultMavenBaseRepo = "https://repo1.maven.org/maven2/"
 )
 
 // GitCommit must be provided during application build.

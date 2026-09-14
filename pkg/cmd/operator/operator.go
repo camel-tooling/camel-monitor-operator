@@ -201,6 +201,11 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	exitOnError(err, "")
 	exitOnError(controller.AddToManager(ctx, mgr, ctrlClient), "")
 	exitOnError(synthetic.ManageSyntheticCamelMonitors(ctx, ctrlClient, mgr.GetCache()), "Camel App Synthetic manager error")
+
+	if platform.GetCheckVersionUpgrade() == "true" {
+		log.Infof("The operator is configured to check any new version released on %s repository", defaults.DefaultMavenBaseRepo)
+	}
+
 	log.Info("Starting the manager")
 	exitOnError(mgr.Start(ctx), "manager exited non-zero")
 }
