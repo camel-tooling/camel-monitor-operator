@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/log"
 )
 
@@ -54,9 +55,9 @@ var (
 )
 
 const (
-	defaultCamelMainMavenMetadata       = "https://repo1.maven.org/maven2/org/apache/camel/camel-core/maven-metadata.xml"
-	defaultCamelQuarkusMavenMetadata    = "https://repo1.maven.org/maven2/io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml"
-	defaultCamelSpringBootMavenMetadata = "https://repo1.maven.org/maven2/org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
+	defaultCamelMainMavenMetadata       = defaults.DefaultMavenBaseRepo + "org/apache/camel/camel-core/maven-metadata.xml"
+	defaultCamelQuarkusMavenMetadata    = defaults.DefaultMavenBaseRepo + "io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml"
+	defaultCamelSpringBootMavenMetadata = defaults.DefaultMavenBaseRepo + "org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
 
 	cacheMetadataTTL = 24 * time.Hour
 )

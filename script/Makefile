@@ -24,7 +24,6 @@ PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 LOCALBIN := $(PROJECT_PATH)/bin
 
 VERSIONFILE := pkg/util/defaults/defaults.go
-BUILD_PROVIDER ?= Apache
 VERSION ?= 0.3.0-SNAPSHOT
 LAST_RELEASED_IMAGE_NAME := camel-monitor-operator
 LAST_RELEASED_VERSION ?= 0.2.0
@@ -81,6 +80,14 @@ BUNDLE_IMAGE_NAME ?= $(CUSTOM_IMAGE)-bundle
 TEST_COMMON_PARALLEL_COUNT ?= 2
 TEST_ADVANCED_PARALLEL_COUNT ?= 2
 
+# Build time configuration: replace these variables during the build
+
+BUILD_PROVIDER ?= Apache
+BUILD_MAVEN_BASE_REPO ?= https://repo1.maven.org/maven2/
+BUILD_MAVEN_MAIN_META ?= org/apache/camel/camel-core/maven-metadata.xml
+BUILD_MAVEN_QUARKUS_META ?= io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml
+BUILD_MAVEN_SPRINGBOOT_META ?= org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -92,13 +99,12 @@ endif
 ifdef GIT_COMMIT
 GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.GitCommit=$(GIT_COMMIT)
 else
-$(warning Could not retrieve a valid Git Commit)
+$(error Could not retrieve a valid Git Commit)
 endif
-ifdef BUILD_PROVIDER
 GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.BuildProvider=$(BUILD_PROVIDER)
-else
-$(warning Could not retrieve a valid Build provider)
-endif
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelMainMavenMetadata=$(BUILD_MAVEN_BASE_REPO)
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelQuarkusMavenMetadata=$(BUILD_MAVEN_QUARKUS_META)
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelSpringBootMavenMetadata=$(BUILD_MAVEN_SPRINGBOOT_META)
 
 GOFLAGS = -ldflags "$(GOLDFLAGS)" -trimpath
 
@@ -147,6 +153,8 @@ codegen:
 	@echo "  Version = \"$(CUSTOM_VERSION)\"" >> $(VERSIONFILE)
 	@echo "  // BuildProvider -- ." >> $(VERSIONFILE)
 	@echo "  BuildProvider = \"$(BUILD_PROVIDER)\"" >> $(VERSIONFILE)
+	@echo "  // DefaultMavenBaseRepo -- ." >> $(VERSIONFILE)
+	@echo "  DefaultMavenBaseRepo = \"$(BUILD_MAVEN_BASE_REPO)\"" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
 	@echo ")" >> $(VERSIONFILE)
 	@echo "" >> $(VERSIONFILE)
