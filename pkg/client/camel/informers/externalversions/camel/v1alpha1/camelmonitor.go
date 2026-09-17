@@ -29,16 +29,45 @@ import (
 	camelv1alpha1 "github.com/camel-tooling/camel-monitor-operator/pkg/client/camel/listers/camel/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
 )
 
 // CamelMonitorInformer provides access to a shared informer and lister for
-// CamelMonitors.
+// CamelMonitors. Prefer using the type-safe variant (see [TypedCamelMonitorInformer]).
 type CamelMonitorInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() camelv1alpha1.CamelMonitorLister
 }
+
+// TypedCamelMonitorInformer provides access to a shared informer and lister for
+// CamelMonitors, including the type-safe TypedInformer variant.
+// It is a superset of CamelMonitorInformer.
+type TypedCamelMonitorInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() CamelMonitorIndexInformer
+	Lister() camelv1alpha1.CamelMonitorLister
+}
+
+// CamelMonitorIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type CamelMonitorIndexInformer cache.TypedSharedIndexInformer[*apiscamelv1alpha1.CamelMonitor]
+
+// CamelMonitorHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for CamelMonitor.
+type CamelMonitorHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apiscamelv1alpha1.CamelMonitor]
+
+// CamelMonitorDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for CamelMonitor.
+type CamelMonitorDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apiscamelv1alpha1.CamelMonitor]
+
+// CamelMonitorFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for CamelMonitor.
+type CamelMonitorFilteringHandler = cache.TypedFilteringResourceEventHandler[*apiscamelv1alpha1.CamelMonitor]
+
+// CamelMonitorIndexers is a specialization of [cache.TypedIndexers] for CamelMonitor.
+type CamelMonitorIndexers = cache.TypedIndexers[*apiscamelv1alpha1.CamelMonitor]
+
+// DeletedCamelMonitor is a specialization of [cache.DeletedObject] for CamelMonitor.
+type DeletedCamelMonitor = cache.DeletedObject[*apiscamelv1alpha1.CamelMonitor]
 
 type camelMonitorInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -49,55 +78,132 @@ type camelMonitorInformer struct {
 // NewCamelMonitorInformer constructs a new informer for CamelMonitor type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedCamelMonitorInformer]).
 func NewCamelMonitorInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredCamelMonitorInformer(client, namespace, resyncPeriod, indexers, nil)
+	return NewCamelMonitorInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedCamelMonitorInformer constructs a new informer for CamelMonitor type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedCamelMonitorInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers CamelMonitorIndexers) CamelMonitorIndexInformer {
+	return NewTypedCamelMonitorInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredCamelMonitorInformer constructs a new informer for CamelMonitor type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredCamelMonitorInformer]).
 func NewFilteredCamelMonitorInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return cache.NewSharedIndexInformer(
+	return NewTypedCamelMonitorInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredCamelMonitorInformer constructs a new informer for CamelMonitor type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredCamelMonitorInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers CamelMonitorIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) CamelMonitorIndexInformer {
+	return NewTypedCamelMonitorInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
+}
+
+// NewCamelMonitorInformerWithOptions constructs a new informer for CamelMonitor type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedCamelMonitorInformerWithOptions]).
+func NewCamelMonitorInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedCamelMonitorInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedCamelMonitorInformerWithOptions constructs a new informer for CamelMonitor type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedCamelMonitorInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) CamelMonitorIndexInformer {
+	gvr := schema.GroupVersionResource{Group: "camel", Version: "v1alpha1", Resource: "camelmonitors"}
+	identifier := options.InformerName.WithResource(gvr)
+	tweakListOptions := options.TweakListOptions
+	return cache.NewTypedSharedIndexInformer[*apiscamelv1alpha1.CamelMonitor](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
-			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
+			ListFunc: func(opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
-					tweakListOptions(&options)
+					tweakListOptions(&opts)
 				}
-				return client.CamelV1alpha1().CamelMonitors(namespace).List(context.Background(), options)
+				return client.CamelV1alpha1().CamelMonitors(namespace).List(context.Background(), opts)
 			},
-			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+			WatchFunc: func(opts v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
-					tweakListOptions(&options)
+					tweakListOptions(&opts)
 				}
-				return client.CamelV1alpha1().CamelMonitors(namespace).Watch(context.Background(), options)
+				return client.CamelV1alpha1().CamelMonitors(namespace).Watch(context.Background(), opts)
 			},
-			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+			ListWithContextFunc: func(ctx context.Context, opts v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
-					tweakListOptions(&options)
+					tweakListOptions(&opts)
 				}
-				return client.CamelV1alpha1().CamelMonitors(namespace).List(ctx, options)
+				return client.CamelV1alpha1().CamelMonitors(namespace).List(ctx, opts)
 			},
-			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+			WatchFuncWithContext: func(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
-					tweakListOptions(&options)
+					tweakListOptions(&opts)
 				}
-				return client.CamelV1alpha1().CamelMonitors(namespace).Watch(ctx, options)
+				return client.CamelV1alpha1().CamelMonitors(namespace).Watch(ctx, opts)
 			},
 		}, client),
 		&apiscamelv1alpha1.CamelMonitor{},
-		resyncPeriod,
-		indexers,
-	)
+		cache.SharedIndexInformerOptions{
+			ResyncPeriod: options.ResyncPeriod,
+			Indexers:     options.Indexers,
+			Identifier:   identifier,
+		},
+	))
 }
 
 func (f *camelMonitorInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredCamelMonitorInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewTypedCamelMonitorInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *camelMonitorInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apiscamelv1alpha1.CamelMonitor{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *camelMonitorInformer) TypedInformer() CamelMonitorIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscamelv1alpha1.CamelMonitor](f.factory.InformerFor(&apiscamelv1alpha1.CamelMonitor{}, f.defaultInformer))
 }
 
 func (f *camelMonitorInformer) Lister() camelv1alpha1.CamelMonitorLister {
 	return camelv1alpha1.NewCamelMonitorLister(f.Informer().GetIndexer())
+}
+
+// ToTypedCamelMonitorInformer converts an untyped informer into a TypedCamelMonitorInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *CamelMonitor. If that is not the case, calling type-safe methods of the returned
+// TypedCamelMonitorInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedCamelMonitorInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedCamelMonitorInformer(informer CamelMonitorInformer) TypedCamelMonitorInformer {
+	if informer, ok := informer.(TypedCamelMonitorInformer); ok {
+		return informer
+	}
+	return &camelMonitorTypedInformerAdapter{informer}
+}
+
+type camelMonitorTypedInformerAdapter struct {
+	CamelMonitorInformer
+}
+
+func (a *camelMonitorTypedInformerAdapter) TypedInformer() CamelMonitorIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apiscamelv1alpha1.CamelMonitor](a.Informer())
+}
+
+// ToCamelMonitorIndexInformer converts an untyped informer into a CamelMonitorIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *CamelMonitor. If that is not the case, calling type-safe methods of the returned
+// CamelMonitorIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a CamelMonitorIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToCamelMonitorIndexInformer(informer cache.SharedIndexInformer) CamelMonitorIndexInformer {
+	if informer, ok := informer.(CamelMonitorIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apiscamelv1alpha1.CamelMonitor](informer)
 }

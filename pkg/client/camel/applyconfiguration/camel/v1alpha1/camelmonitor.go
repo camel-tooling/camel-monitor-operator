@@ -31,7 +31,7 @@ import (
 //
 // CamelMonitor is the Schema for the Camel Applications API.
 type CamelMonitorApplyConfiguration struct {
-	v1.TypeMetaApplyConfiguration    `json:",inline"`
+	v1.TypeMetaApplyConfiguration    `json:""`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	// the desired App specification
 	Spec *camelv1alpha1.CamelMonitorSpec `json:"spec,omitempty"`
