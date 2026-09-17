@@ -34,13 +34,18 @@ CODEGEN_VERSION := v0.35.0
 OPERATOR_SDK_VERSION := v1.30.0
 KUSTOMIZE_VERSION := v4.5.4
 OPM_VERSION := v1.24.0
+
 # Golang tooling
 LINTER ?= $(LOCALBIN)/golangci-lint
 DEADCODE ?= $(LOCALBIN)/deadcode
 GOVULNCHECK ?= $(LOCALBIN)/govulncheck
 GOIMPORT ?= $(LOCALBIN)/goimports
 LINTER_VERSION ?= v2.12.2
-GOVULNCHECK_VERSION ?= latest
+GOVULNCHECK_VERSION ?= v1.8.0
+GOIMPORTS_VERSION ?= v0.50.0
+GOTESTFMT_VERSION := v2.5.0
+DEADCODE_VERSION := v0.50.0
+
 LINT_GOGC ?= 20
 LINT_DEADLINE ?= 10m
 
@@ -188,16 +193,14 @@ build-platform: build build-camel-monitor-platform
 
 ci-build: clean codegen set-version check-licenses dir-licenses build-camel-monitor cross-compile
 
-do-build: gotestfmt-install
-
 gotestfmt-install:
 ifeq (, $(shell command -v gotestfmt 2> /dev/null))
-	go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+	go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@$(GOTESTFMT_VERSION)
 endif
 
 # Build images without running unit tests
 # NOTEST=1 make images
-test: do-build
+test:
 ifndef NOTEST
 	@echo "####### Running unit test..."
 	go test ./... $(COVERAGE_OPTS)
@@ -205,43 +208,43 @@ else
 	@echo "####### Skipping unit test..."
 endif
 
-test-common:
+test-common: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
 # Used for arm64 arch test, as Camel K provides those platform images out of the box
-test-common-ck-only:
+test-common-ck-only: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/integration* --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-knative:
+test-knative: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/knative/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-prometheus:
+test-prometheus: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/prometheus/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-olm:
+test-install-olm: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 20m -v ./e2e/install/olm -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-own-namespace:
+test-install-own-namespace: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/own-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-single-namespace:
+test-install-single-namespace: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/single-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-test-install-multi-namespace:
+test-install-multi-namespace: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/multi-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
@@ -321,7 +324,7 @@ fmt: goimport
 	go fmt ./...
 
 dead-code:
-	GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/deadcode@latest
+	GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/deadcode@$(DEADCODE_VERSION)
 	GOGC=$(LINT_GOGC) $(DEADCODE) ./...
 
 
@@ -554,7 +557,7 @@ govulncheck:
 
 .PHONY: goimport
 goimport:
-	GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/goimports@latest
+	GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 
 #####
 # START Local installation procedure. Handy for development purpose
