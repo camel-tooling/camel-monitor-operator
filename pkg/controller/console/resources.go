@@ -69,11 +69,9 @@ func deployment(namespace, image string) *appsv1.Deployment {
 	defaultMode := int32(420)
 
 	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pluginName,
-			Namespace: namespace,
-			Labels:    labels,
-		},
+		Name:      pluginName,
+		Namespace: namespace,
+		Labels:    labels,
 		Spec: appsv1.DeploymentSpec{
 			Replicas: new(int32(1)),
 			Selector: &metav1.LabelSelector{
@@ -136,22 +134,16 @@ func deployment(namespace, image string) *appsv1.Deployment {
 					Volumes: []corev1.Volume{
 						{
 							Name: "plugin-serving-cert",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  certSecretName,
-									DefaultMode: &defaultMode,
-								},
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  certSecretName,
+								DefaultMode: &defaultMode,
 							},
 						},
 						{
 							Name: "nginx-conf",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: pluginName,
-									},
-									DefaultMode: &defaultMode,
-								},
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								Name:        pluginName,
+								DefaultMode: &defaultMode,
 							},
 						},
 					},
@@ -163,13 +155,11 @@ func deployment(namespace, image string) *appsv1.Deployment {
 
 func service(namespace string) *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pluginName,
-			Namespace: namespace,
-			Labels:    commonLabels(),
-			Annotations: map[string]string{
-				"service.alpha.openshift.io/serving-cert-secret-name": certSecretName,
-			},
+		Name:      pluginName,
+		Namespace: namespace,
+		Labels:    commonLabels(),
+		Annotations: map[string]string{
+			"service.alpha.openshift.io/serving-cert-secret-name": certSecretName,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -190,14 +180,10 @@ func service(namespace string) *corev1.Service {
 
 func consolePlugin(namespace string) *consolev1.ConsolePlugin {
 	return &consolev1.ConsolePlugin{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: consolev1.SchemeGroupVersion.String(),
-			Kind:       "ConsolePlugin",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   pluginName,
-			Labels: commonLabels(),
-		},
+		APIVersion: consolev1.SchemeGroupVersion.String(),
+		Kind:       "ConsolePlugin",
+		Name:       pluginName,
+		Labels:     commonLabels(),
 		Spec: consolev1.ConsolePluginSpec{
 			DisplayName: "Camel Dashboard Console",
 			I18n: consolev1.ConsolePluginI18n{

@@ -55,15 +55,11 @@ func addGrafanaDashboard(ctx context.Context, c client.Client, target *v1alpha1.
 		}
 
 		dashboard := &integreatlyv1beta1.GrafanaDashboard{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "GrafanaDashboard",
-				APIVersion: integreatlyv1beta1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            target.GetName(),
-				Namespace:       target.GetNamespace(),
-				OwnerReferences: references,
-			},
+			Kind:            "GrafanaDashboard",
+			APIVersion:      integreatlyv1beta1.SchemeGroupVersion.String(),
+			Name:            target.GetName(),
+			Namespace:       target.GetNamespace(),
+			OwnerReferences: references,
 			Spec: integreatlyv1beta1.GrafanaDashboardSpec{
 				GrafanaCommonSpec: integreatlyv1beta1.GrafanaCommonSpec{
 					AllowCrossNamespaceImport: true,

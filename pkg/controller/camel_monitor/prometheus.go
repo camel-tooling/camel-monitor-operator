@@ -41,16 +41,12 @@ func addPrometheusPodMonitor(ctx context.Context, c client.Client, target *v1alp
 		metricsPortNumber := target.Status.Pods[0].ObservabilityService.MetricsPort
 		references := target.GetOwnerReferences()
 		podMonitor := monitoringv1.PodMonitor{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "PodMonitor",
-				APIVersion: monitoringv1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            target.GetName(),
-				Namespace:       target.GetNamespace(),
-				OwnerReferences: references,
-				Labels:          platform.GetPrometheusLabels(),
-			},
+			Kind:            "PodMonitor",
+			APIVersion:      monitoringv1.SchemeGroupVersion.String(),
+			Name:            target.GetName(),
+			Namespace:       target.GetNamespace(),
+			OwnerReferences: references,
+			Labels:          platform.GetPrometheusLabels(),
 			Spec: monitoringv1.PodMonitorSpec{
 				Selector: metav1.LabelSelector{
 					MatchLabels: matchLabelSelector,

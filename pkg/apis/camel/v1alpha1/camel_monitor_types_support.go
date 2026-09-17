@@ -50,14 +50,10 @@ const (
 
 func NewCamelMonitor(namespace string, name string) CamelMonitor {
 	return CamelMonitor{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: SchemeGroupVersion.String(),
-			Kind:       AppKind,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
+		APIVersion: SchemeGroupVersion.String(),
+		Kind:       AppKind,
+		Namespace:  namespace,
+		Name:       name,
 	}
 }
 
