@@ -249,6 +249,12 @@ test-install-multi-namespace: gotestfmt-install
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/multi-namespace/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
+test-install-helm: gotestfmt-install
+	FAILED=0; \
+	CAMEL_MONITOR_OPERATOR_IMAGE=$(CUSTOM_IMAGE):$(CUSTOM_VERSION) \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/install/helm/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
 build-camel-monitor:
 	@echo "####### Building camel-monitor CLI for linux/$(IMAGE_ARCH) architecture..."
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(IMAGE_ARCH) go build $(GOFLAGS) -o build/_output/bin/camel-monitor-$(IMAGE_ARCH) ./cmd/camel-monitor/*.go
