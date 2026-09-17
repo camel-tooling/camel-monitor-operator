@@ -26,7 +26,7 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// CamelMonitors returns a CamelMonitorInformer.
-	CamelMonitors() CamelMonitorInformer
+	CamelMonitors() TypedCamelMonitorInformer
 }
 
 type version struct {
@@ -40,7 +40,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// CamelMonitors returns a CamelMonitorInformer.
-func (v *version) CamelMonitors() CamelMonitorInformer {
+// CamelMonitors returns a TypedCamelMonitorInformer.
+func (v *version) CamelMonitors() TypedCamelMonitorInformer {
 	return &camelMonitorInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
