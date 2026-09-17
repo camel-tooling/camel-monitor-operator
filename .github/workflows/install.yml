@@ -119,3 +119,28 @@ jobs:
       shell: bash
       run: |
         GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-multi-namespace
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+        submodules: recursive
+
+    - name: Infra setting
+      uses: ./.github/actions/infra-setting
+
+    - name: Install Helm
+      uses: azure/setup-helm@v5
+
+    - name: Build Helm chart
+      shell: bash
+      run: |
+        make release-helm
+
+    - name: Run test
+      shell: bash
+      run: |
+        GOTESTFMT="-json 2>&1 | gotestfmt" make test-install-helm
