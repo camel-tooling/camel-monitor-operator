@@ -24,7 +24,6 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,16 +34,12 @@ func addPrometheusRuleAlerts(ctx context.Context, c client.Client, namespace str
 	// TODO, we may add ownership references to let it be garbaged collected.
 	// It could be the same operator Pod if needed.
 	prometheusRule := monitoringv1.PrometheusRule{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "PrometheusRule",
-			APIVersion: monitoringv1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "camel-monitor-alerts",
-			Namespace: namespace,
-			// We use the default one for installation
-			Labels: platform.GetPrometheusRuleLabels(),
-		},
+		Kind:       "PrometheusRule",
+		APIVersion: monitoringv1.SchemeGroupVersion.String(),
+		Name:       "camel-monitor-alerts",
+		Namespace:  namespace,
+		// We use the default one for installation
+		Labels: platform.GetPrometheusRuleLabels(),
 		Spec: monitoringv1.PrometheusRuleSpec{
 			Groups: []monitoringv1.RuleGroup{
 				{

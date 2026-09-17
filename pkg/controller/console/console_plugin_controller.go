@@ -97,10 +97,9 @@ func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
 
 	mapToConsole := handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ ctrl.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{
+			return []reconcile.Request{{
 				Name:      pluginName,
-				Namespace: namespace,
-			}}}
+				Namespace: namespace}}
 		},
 	)
 
@@ -125,10 +124,9 @@ func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
 		log.Info("Triggering initial console reconciliation")
 
 		bootstrapCh <- event.GenericEvent{
-			Object: &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Object: &corev1.ConfigMap{
 				Name:      pluginName,
-				Namespace: namespace,
-			}},
+				Namespace: namespace},
 		}
 
 		return nil
@@ -203,7 +201,7 @@ func (r *reconciler) isUninstalling(ctx context.Context) bool {
 func (r *reconciler) handleUninstall(ctx context.Context) error {
 	log.Info("Operator CSV being deleted, cleaning up console resources")
 
-	cp := &consolev1.ConsolePlugin{ObjectMeta: metav1.ObjectMeta{Name: pluginName}}
+	cp := &consolev1.ConsolePlugin{Name: pluginName}
 
 	err := r.client.Delete(ctx, cp)
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -265,10 +263,9 @@ func (r *reconciler) ensureAllResources(ctx context.Context, ownerRef metav1.Own
 }
 
 func (r *reconciler) ensureConfigMap(ctx context.Context, ownerRef metav1.OwnerReference) error {
-	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+	cm := &corev1.ConfigMap{
 		Name:      pluginName,
-		Namespace: r.namespace,
-	}}
+		Namespace: r.namespace}
 
 	return r.createOrUpdate(ctx, cm, func() error {
 		cm.Labels = commonLabels()
@@ -280,10 +277,9 @@ func (r *reconciler) ensureConfigMap(ctx context.Context, ownerRef metav1.OwnerR
 }
 
 func (r *reconciler) ensureDeployment(ctx context.Context, ownerRef metav1.OwnerReference) error {
-	deploy := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+	deploy := &appsv1.Deployment{
 		Name:      pluginName,
-		Namespace: r.namespace,
-	}}
+		Namespace: r.namespace}
 
 	return r.createOrUpdate(ctx, deploy, func() error {
 		d := deployment(r.namespace, r.image)
@@ -296,10 +292,9 @@ func (r *reconciler) ensureDeployment(ctx context.Context, ownerRef metav1.Owner
 }
 
 func (r *reconciler) ensureService(ctx context.Context, ownerRef metav1.OwnerReference) error {
-	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{
+	svc := &corev1.Service{
 		Name:      pluginName,
-		Namespace: r.namespace,
-	}}
+		Namespace: r.namespace}
 
 	return r.createOrUpdate(ctx, svc, func() error {
 		s := service(r.namespace)
@@ -315,9 +310,8 @@ func (r *reconciler) ensureService(ctx context.Context, ownerRef metav1.OwnerRef
 }
 
 func (r *reconciler) ensureConsolePlugin(ctx context.Context) error {
-	cp := &consolev1.ConsolePlugin{ObjectMeta: metav1.ObjectMeta{
-		Name: pluginName,
-	}}
+	cp := &consolev1.ConsolePlugin{
+		Name: pluginName}
 
 	return r.createOrUpdate(ctx, cp, func() error {
 		p := consolePlugin(r.namespace)

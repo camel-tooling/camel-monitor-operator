@@ -144,25 +144,17 @@ func lookupObject(ctx context.Context, c client.Client, kind, ns string, name st
 	switch kind {
 	case "Deployment":
 		obj = &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       kind,
-				APIVersion: corev1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Kind:       kind,
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Namespace:  ns,
+			Name:       name,
 		}
 	case "CronJob":
 		obj = &batchv1.CronJob{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       kind,
-				APIVersion: batchv1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name,
-			},
+			Kind:       kind,
+			APIVersion: batchv1.SchemeGroupVersion.String(),
+			Namespace:  ns,
+			Name:       name,
 		}
 	default:
 		return nil, fmt.Errorf("cannot manage Camel application of type %s", kind)
