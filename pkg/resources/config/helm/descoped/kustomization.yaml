@@ -23,6 +23,7 @@ commonLabels:
 
 resources:
 - ../../rbac/descoped
+- ../../rbac
 
 patches:
  - target:
