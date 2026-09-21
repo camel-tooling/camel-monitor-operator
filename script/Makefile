@@ -507,7 +507,7 @@ endif
 	$(OPERATOR_SDK) run bundle $(BUNDLE_IMAGE_NAME):$(CUSTOM_VERSION) --install-mode $(OLM_INSTALL_MODE) -n $(NAMESPACE)
 
 kustomize:
-	go install sigs.k8s.io/kustomize/kustomize/v4@$(KUSTOMIZE_VERSION)
+	go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 KUSTOMIZE=$(GOBIN)/kustomize
 
 operator-sdk: detect-os
