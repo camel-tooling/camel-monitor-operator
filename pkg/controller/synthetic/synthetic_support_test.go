@@ -65,7 +65,8 @@ func TestSetHealthHttpError(t *testing.T) {
 	defer server.Close()
 
 	podInfo := &v1alpha1.PodInfo{}
-	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", appObservabilityConf{HealthPorts: []string{"0"}, HealthEndpoints: []string{"/health"}, Namespace: "test-ns", Name: "test-cmon"})
+	err := setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1",
+		appObservabilityConf{HealthPorts: []string{"0"}, HealthEndpoints: []string{"/health"}})
 	require.Error(t, err)
 }
 
@@ -83,7 +84,8 @@ func TestSetHealthStatusOK(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}})
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -104,7 +106,8 @@ func TestSetHealthStatus503(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}})
 	require.NoError(t, err)
 
 	require.Equal(t, "Degraded", podInfo.Runtime.Status)
@@ -124,7 +127,8 @@ func TestSetHealthStatusNotFound(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"/health"}})
 	require.Error(t, err)
 	assert.Equal(t, "no valid health endpoint found", err.Error())
 }
@@ -149,7 +153,8 @@ func TestSetHealthStatusAlternative(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"observe/live", "q/live"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{portStr}, HealthEndpoints: []string{"observe/live", "q/live"}})
 	require.NoError(t, err)
 
 	require.NotNil(t, podInfo.Runtime)
@@ -194,7 +199,8 @@ camel_exchanges_last_timestamp 123456
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
@@ -234,7 +240,8 @@ func TestSetMetricsMissing(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.Error(t, err)
 	assert.Equal(t, "no valid metrics endpoint found", err.Error())
 }
@@ -280,7 +287,8 @@ camel_exchanges_last_timestamp 123456
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"metrics", "q/metrics", "actuator/prometheus"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"metrics", "q/metrics", "actuator/prometheus"}})
 	require.NoError(t, err)
 
 	// Verify endpoint + port set
@@ -310,7 +318,8 @@ func TestSetMetricsStatusNotOK(t *testing.T) {
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "HTTP status not OK")
 }
@@ -628,7 +637,8 @@ jvm_memory_used_bytes{area="nonheap",id="Metaspace"} 5.7801568E7
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.NoError(t, err)
 
 	assert.Equal(t, "14", *podInfo.ProcessCPUUsed)
@@ -669,7 +679,8 @@ jvm_memory_used_bytes{area="heap",id="G1 Survivor Space"} 2081872.0
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.NoError(t, err)
 
 	assert.True(t, podInfo.HasMemoryPressure)
@@ -697,7 +708,8 @@ process_cpu_usage 0.1
 	host, portStr, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
 	require.NoError(t, err)
 
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.NoError(t, err)
 	// value is in millicores
 	err = setCPUPressure(podInfo, ptr.To("500"))
@@ -847,12 +859,14 @@ process_cpu_usage 0.1
 	require.NoError(t, err)
 
 	// This call points to a non existing port, it must fail
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{"1234"}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{"1234"}, MetricsEndpoints: []string{"/metrics"}})
 	require.Error(t, err)
 	assert.Equal(t, "no valid metrics endpoint found", err.Error())
 
 	// This call points to a non existing port and an existing port, it must succeed
-	err = setMetrics(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{MetricsPorts: []string{"1234", portStr}, MetricsEndpoints: []string{"/metrics"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setMetrics(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{MetricsPorts: []string{"1234", portStr}, MetricsEndpoints: []string{"/metrics"}})
 	require.NoError(t, err)
 }
 
@@ -877,43 +891,13 @@ func TestHealthAlternativePort(t *testing.T) {
 	require.NoError(t, err)
 
 	// This call points to a non existing port, it must fail
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{"1234"}, HealthEndpoints: []string{"q/live"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{"1234"}, HealthEndpoints: []string{"q/live"}})
 	require.Error(t, err)
 	assert.Equal(t, "no valid health endpoint found", err.Error())
 
 	// This call points to a non existing port and an existing port, it must succeed
-	err = setHealth(t.Context(), *server.Client(), podInfo, host, appObservabilityConf{HealthPorts: []string{"1234", portStr}, HealthEndpoints: []string{"q/live"}, Namespace: "test-ns", Name: "test-cmon"})
+	err = setHealth(t.Context(), *server.Client(), podInfo, host,
+		appObservabilityConf{HealthPorts: []string{"1234", portStr}, HealthEndpoints: []string{"q/live"}})
 	require.NoError(t, err)
-}
-
-
-func TestGetAppObservabilityConfIncludesMonitorIdentity(t *testing.T) {
-	cmon := v1alpha1.NewCamelMonitor("demo-ns", "demo-app")
-	conf := GetAppObservabilityConf(&cmon)
-	assert.Equal(t, "demo-ns", conf.Namespace)
-	assert.Equal(t, "demo-app", conf.Name)
-}
-
-func TestSetHealthNotFoundIncludesMonitorIdentityInConf(t *testing.T) {
-	// Regression for #281: endpoint-not-found retries must carry CamelMonitor identity
-	// through appObservabilityConf so logs can name namespace and CamelMonitor.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer server.Close()
-
-	_, port, err := net.SplitHostPort(server.Listener.Addr().String())
-	require.NoError(t, err)
-
-	podInfo := &v1alpha1.PodInfo{ObservabilityService: &v1alpha1.ObservabilityServiceInfo{}}
-	conf := appObservabilityConf{
-		HealthPorts:     []string{port},
-		HealthEndpoints: []string{"observe/health", "q/health", "actuator/health"},
-		Namespace:       "apps",
-		Name:            "my-camel-app",
-	}
-	err = setHealth(t.Context(), *server.Client(), podInfo, "127.0.0.1", conf)
-	require.Error(t, err)
-	assert.Equal(t, "apps", conf.Namespace)
-	assert.Equal(t, "my-camel-app", conf.Name)
 }
