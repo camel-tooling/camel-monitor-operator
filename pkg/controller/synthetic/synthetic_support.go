@@ -52,9 +52,7 @@ type appObservabilityConf struct {
 	MetricsPorts     []string
 	MetricsEndpoints []string
 	HealthEndpoints  []string
-	// Namespace and Name identify the CamelMonitor being scraped, for log context.
-	Namespace string
-	Name      string
+	logger           log.Logger
 }
 
 // getPods returns the pods backing the Camel application. You can provide an inspect flag to scrape health and metrics.
@@ -106,14 +104,14 @@ func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, po
 	err := setHealth(ctx, httpClient, podInfo, podIp, obsConf)
 	if err != nil {
 		reason := "Could not scrape health endpoint: " + err.Error()
-		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
+		obsConf.logger.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 		podInfo.Reason = reason
 	}
 
 	err = setMetrics(ctx, httpClient, podInfo, podIp, obsConf)
 	if err != nil {
 		reason := "Could not scrape metrics endpoint: " + err.Error()
-		log.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
+		obsConf.logger.Infof("Pod %s/%s: %s", pod.GetNamespace(), pod.GetName(), reason)
 
 		if podInfo.Reason != "" {
 			podInfo.Reason += ". "
@@ -124,7 +122,7 @@ func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, po
 
 	err = setCPUPressure(podInfo, cpuLimit)
 	if err != nil {
-		log.Error(err, "Could not parse cpu usage/max value, skipping")
+		obsConf.logger.Error(err, "Could not parse cpu usage/max value, skipping")
 	}
 }
 
@@ -177,8 +175,8 @@ func GetAppObservabilityConf(cmon *v1alpha1.CamelMonitor) appObservabilityConf {
 		MetricsPorts:     getObservabilityMetricsPorts(cmon.GetAnnotations(), existingMetricsPort),
 		MetricsEndpoints: getObservabilityMetricsEndpoint(cmon.GetAnnotations(), existingMetricsEndpoint),
 		HealthEndpoints:  getObservabilityHealthEndpoints(cmon.GetAnnotations(), existingHealthEndpoint),
-		Namespace:        cmon.Namespace,
-		Name:             cmon.Name,
+		logger: log.Log.WithValues("request-namespace", cmon.Namespace, "request-name", cmon.Name).
+			ForCamelMonitor(cmon),
 	}
 
 	return obsConf
@@ -277,7 +275,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 	if err != nil {
 		// We don't return an error on purpose: the caller will try
 		// the next port.
-		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
+		obsConf.logger.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
 		// Tell the caller to stop trying endpoints for this port.
 		return false, false, nil
@@ -285,14 +283,13 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			log.Error(err, "failed to close response body")
+			obsConf.logger.Error(err, "failed to close response body")
 		}
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Infof("CamelMonitor %s/%s: %s not found. Trying on another endpoint if available",
-			obsConf.Namespace, obsConf.Name, endpoint)
+		obsConf.logger.Infof("%s not found. Trying on another endpoint if available", endpoint)
 
 		return false, true, nil
 	}
@@ -318,37 +315,38 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 	}
 
 	if metric, ok := metrics[v1alpha1.Metric_app_info]; ok {
-		populateRuntimeInfo(metric, v1alpha1.Metric_app_info, podInfo)
+		populateRuntimeInfo(metric, v1alpha1.Metric_app_info, podInfo, obsConf)
 	}
 
 	podInfo.Runtime.Exchange.Total = int(ptr.Deref(
-		getCounter(metrics, v1alpha1.Metric_camel_exchanges_total),
+		getCounter(metrics, v1alpha1.Metric_camel_exchanges_total, obsConf),
 		0,
 	))
 	podInfo.Runtime.Exchange.Failed = int(ptr.Deref(
-		getCounter(metrics, v1alpha1.Metric_camel_exchanges_failed_total),
+		getCounter(metrics, v1alpha1.Metric_camel_exchanges_failed_total, obsConf),
 		0,
 	))
 	podInfo.Runtime.Exchange.Succeeded = int(ptr.Deref(
-		getCounter(metrics, v1alpha1.Metric_camel_exchanges_succeeded_total),
+		getCounter(metrics, v1alpha1.Metric_camel_exchanges_succeeded_total, obsConf),
 		0,
 	))
 	// Note: camel is reporting this as a gauge
 	podInfo.Runtime.Exchange.Pending = int(ptr.Deref(
-		getGauge(metrics, v1alpha1.Metric_camel_exchanges_inflight),
+		getGauge(metrics, v1alpha1.Metric_camel_exchanges_inflight, obsConf),
 		0,
 	))
 
 	exchangeLastTimestamp := getGauge(
 		metrics,
 		v1alpha1.Metric_camel_exchanges_last_timestamp,
+		obsConf,
 	)
 	if exchangeLastTimestamp != nil {
 		timeUnixMilli := time.UnixMilli(int64(math.Round(*exchangeLastTimestamp)))
 		podInfo.Runtime.Exchange.LastTimestamp = &metav1.Time{Time: timeUnixMilli}
 	}
 
-	processFloatVal := getGauge(metrics, v1alpha1.Metric_system_cpu_usage)
+	processFloatVal := getGauge(metrics, v1alpha1.Metric_system_cpu_usage, obsConf)
 	if processFloatVal != nil {
 		// Values are expressed in cores in Prometheus, whilst we want millicores.
 		podInfo.ProcessCPUUsed = new(
@@ -357,11 +355,11 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 	}
 
 	podInfo.JVMMemoryUsed = new(int64(
-		*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_used, "area", "heap"),
+		*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_used, "area", "heap", obsConf),
 	))
 
 	podInfo.JVMMemoryMax = new(int64(
-		*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_max, "area", "heap"),
+		*getGaugeWithLabel(metrics, v1alpha1.Metric_jvm_memory_max, "area", "heap", obsConf),
 	))
 
 	if podInfo.JVMMemoryUsed != nil &&
@@ -389,9 +387,9 @@ func parseMetrics(reader io.Reader) (map[string]*dto.MetricFamily, error) {
 	return mf, nil
 }
 
-func populateRuntimeInfo(metric *dto.MetricFamily, metricName string, podInfo *v1alpha1.PodInfo) {
+func populateRuntimeInfo(metric *dto.MetricFamily, metricName string, podInfo *v1alpha1.PodInfo, obsConf appObservabilityConf) {
 	if len(metric.GetMetric()) != 1 {
-		log.Infof("WARN: expected exactly one %s metric, got %d", metricName, len(metric.GetMetric()))
+		obsConf.logger.Infof("WARN: expected exactly one %s metric, got %d", metricName, len(metric.GetMetric()))
 
 		return
 	}
@@ -408,16 +406,16 @@ func populateRuntimeInfo(metric *dto.MetricFamily, metricName string, podInfo *v
 	}
 }
 
-func getCounter(metrics map[string]*dto.MetricFamily, metricName string) *float64 {
+func getCounter(metrics map[string]*dto.MetricFamily, metricName string, obsConf appObservabilityConf) *float64 {
 	if metric, ok := metrics[metricName]; ok {
 		if len(metric.GetMetric()) == 0 {
-			log.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
+			obsConf.logger.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
 
 			return nil
 		}
 
 		if metric.GetMetric()[0].GetCounter() == nil {
-			log.Debugf("expected %s metric to be a counter", metricName)
+			obsConf.logger.Debugf("expected %s metric to be a counter", metricName)
 
 			return nil
 		}
@@ -428,21 +426,21 @@ func getCounter(metrics map[string]*dto.MetricFamily, metricName string) *float6
 	return nil
 }
 
-func getGauge(metrics map[string]*dto.MetricFamily, metricName string) *float64 {
-	return getGaugeInternal(metrics, metricName, "", "")
+func getGauge(metrics map[string]*dto.MetricFamily, metricName string, obsConf appObservabilityConf) *float64 {
+	return getGaugeInternal(metrics, metricName, "", "", obsConf)
 }
 
 // getGaugeWithLabel filter the gauge with the label provided.
-func getGaugeWithLabel(metrics map[string]*dto.MetricFamily, metricName, labelName, labelValue string) *float64 {
-	return getGaugeInternal(metrics, metricName, labelName, labelValue)
+func getGaugeWithLabel(metrics map[string]*dto.MetricFamily, metricName, labelName, labelValue string, obsConf appObservabilityConf) *float64 {
+	return getGaugeInternal(metrics, metricName, labelName, labelValue, obsConf)
 }
 
-func getGaugeInternal(metrics map[string]*dto.MetricFamily, metricName, labelName, labelValue string) *float64 {
+func getGaugeInternal(metrics map[string]*dto.MetricFamily, metricName, labelName, labelValue string, obsConf appObservabilityConf) *float64 {
 	var total float64
 
 	if metric, ok := metrics[metricName]; ok {
 		if len(metric.GetMetric()) == 0 {
-			log.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
+			obsConf.logger.Debugf("expected at least 1 %s metric, got %d", metricName, len(metric.GetMetric()))
 
 			return nil
 		}
@@ -516,14 +514,14 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 	if err != nil {
 		// We don't return an error on purpose: the caller will try
 		// the next port.
-		log.Infof("cannot connect to %s. Trying on another port if available", hostPort)
+		obsConf.logger.Infof("cannot connect to %s. Trying on another port if available", hostPort)
 
 		return false, false, nil
 	}
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			log.Error(err, "failed to close response body")
+			obsConf.logger.Error(err, "failed to close response body")
 		}
 	}()
 
@@ -531,8 +529,7 @@ func checkHealthEndpoint(ctx context.Context, httpClient http.Client, podInfo *v
 
 	if resp.StatusCode == http.StatusNotFound {
 		// Retry possible alternative endpoints.
-		log.Infof("CamelMonitor %s/%s: %s not found. Trying on another endpoint if available",
-			obsConf.Namespace, obsConf.Name, healthEndpoint)
+		obsConf.logger.Infof("%s not found. Trying on another endpoint if available", healthEndpoint)
 
 		return false, true, nil
 	}
