@@ -87,7 +87,7 @@ TEST_ADVANCED_PARALLEL_COUNT ?= 2
 
 # Build time configuration: replace these variables during the build
 
-BUILD_PROVIDER ?= Apache
+BUILD_PROVIDER ?= Camel Tooling
 BUILD_MAVEN_BASE_REPO ?= https://repo1.maven.org/maven2/
 BUILD_MAVEN_MAIN_META ?= org/apache/camel/camel-core/maven-metadata.xml
 BUILD_MAVEN_QUARKUS_META ?= io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml
