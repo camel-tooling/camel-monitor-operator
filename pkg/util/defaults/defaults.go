@@ -25,7 +25,7 @@ const (
 	// Version -- .
 	Version = "0.3.0-SNAPSHOT"
 	// BuildProvider -- .
-	BuildProvider = "Apache"
+	BuildProvider = "Camel Tooling"
 	// DefaultMavenBaseRepo -- .
 	DefaultMavenBaseRepo = "https://repo1.maven.org/maven2/"
 )
