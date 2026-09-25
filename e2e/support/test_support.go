@@ -55,6 +55,8 @@ var (
 	testClient         *kubernetes.Clientset
 	camelMonitorClient *client.Client
 
+	samplesContainerRegistryBase = "quay.io/camel-tooling"
+
 	TestTimeoutShort  = 1 * time.Minute
 	TestTimeoutMedium = 3 * time.Minute
 	TestTimeoutLong   = 5 * time.Minute
@@ -394,42 +396,30 @@ func MakeWithContext(t *testing.T, rule string, args ...string) *exec.Cmd {
 // These are the apps containing the camel-observability-services
 
 func CamelAppMain() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-app-main:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-app-main:" + getCamelAppVersion()
 }
 
 func CamelAppQuarkus() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-app-quarkus:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-app-quarkus:" + getCamelAppVersion()
 }
 
 func CamelAppSpringBoot() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-app-sb:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-app-sb:" + getCamelAppVersion()
 }
 
 // These are the apps containing the regular camel metrics and health
 // as configured by default for each runtime
 
 func CamelRegularAppMain() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-regular-app-main:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-regular-app-main:" + getCamelAppVersion()
 }
 
 func CamelRegularAppQuarkus() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-regular-app-quarkus:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-regular-app-quarkus:" + getCamelAppVersion()
 }
 
 func CamelRegularAppSpringBoot() string {
-	camelAppVersion := getCamelAppVersion()
-
-	return "docker.io/squakez/db-regular-app-sb:" + camelAppVersion
+	return samplesContainerRegistryBase + "/sample-db-regular-app-sb:" + getCamelAppVersion()
 }
 
 func getCamelAppVersion() string {
