@@ -46,8 +46,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	. "github.com/onsi/gomega"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
@@ -66,6 +68,8 @@ func init() {
 	// Change default to longer periods (we're in kubernetes, so reconciliations can take seconds)
 	SetDefaultEventuallyTimeout(TestTimeoutShort)
 	SetDefaultEventuallyPollingInterval(1 * time.Second)
+	// This line prevents controller-runtime from complaining about log.SetLogger never being called
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 }
 
 func WithNewTestNamespace(t *testing.T, doRun func(context.Context, *gomega.WithT, string)) {
