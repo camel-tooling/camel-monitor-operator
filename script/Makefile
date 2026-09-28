@@ -617,11 +617,11 @@ endif
 
 install-k8s-global: DEFAULT_NS="camel"
 install-k8s-global: KUSTOMIZE_DIR="install/overlays/all-namespaces"
-install-k8s-global: clone-kustomize-dir set-operator-id set-operator-env install-operator
+install-k8s-global: kustomize clone-kustomize-dir set-operator-id set-operator-env install-operator
 
 install-k8s-ns: DEFAULT_NS="default"
 install-k8s-ns: KUSTOMIZE_DIR="install/overlays/own-namespace"
-install-k8s-ns: clone-kustomize-dir set-operator-id set-operator-env install-operator
+install-k8s-ns: kustomize clone-kustomize-dir set-operator-id set-operator-env install-operator
 
 uninstall:
 ifdef NAMESPACE
