@@ -64,6 +64,12 @@ jobs:
     - name: Infra setting
       uses: ./.github/actions/infra-setting
 
+    - name: Install operator and tenant namespace
+      shell: bash
+      run: |
+        kubectl apply -k install/overlays/own-namespace/ --server-side
+        kubectl wait --for=condition=available deployment/camel-monitor-operator --timeout=120s -n default
+
     - name: Run test
       shell: bash
       run: |
