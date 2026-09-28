@@ -24,7 +24,6 @@ package namespaced
 
 import (
 	"context"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -34,22 +33,16 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	corev1 "k8s.io/api/core/v1"
 )
 
+/*
+* The test will install the operator in the "default" namespace and will monitor the applications
+* deployed on "default" namespace only. IMPORTANT: the operator and namespaces have to be created before
+* running the test.
+ */
 func TestOwnNamespaceInstallation(t *testing.T) {
 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
-		os.Setenv("CAMEL_MONITOR_OPERATOR_TEST_MAKE_DIR", "../../../")
-		ExpectExecSucceedWithTimeout(t, g,
-			Make(t,
-				"NAMESPACE="+ns,
-				"install-k8s-ns",
-			),
-			"300s",
-		)
-		// Check the operator pod is running
-		g.Eventually(PodStatusPhase(t, ctx, ns, "camel.apache.org/component=operator"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
-
+		ns = "default"
 		// Verify an app running in the same namespace
 		t.Run("simple Deployment (monitored)", func(t *testing.T) {
 			ExpectExecSucceed(t, g,
