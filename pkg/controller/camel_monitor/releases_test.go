@@ -223,3 +223,23 @@ func cleanCache(t *testing.T) {
 	camelQuarkusMetadataCache = nil
 	camelSpringBootMetadataCache = nil
 }
+
+func TestCamelQuarkusMavenMetadata404(t *testing.T) {
+	cleanCache(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `
+			<error>
+				not found
+			</error>
+		`)
+	}))
+	defer server.Close()
+
+	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", server.URL)
+
+	_, err := GetCamelQuarkusMetadata(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "fetch Maven metadata: unexpected HTTP status 404 Not Found from url")
+}

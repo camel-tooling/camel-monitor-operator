@@ -21,8 +21,10 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,6 +62,7 @@ const (
 	defaultCamelSpringBootMavenMetadata = defaults.DefaultMavenBaseRepo + "org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
 
 	cacheMetadataTTL = 24 * time.Hour
+	maxErrorBodySize = 16 * 1024
 )
 
 // GetCamelMainMetadata is in charge to recover the Camel Main maven metadata.
@@ -151,6 +154,28 @@ func fetchMavenMetadata(ctx context.Context, url string) (MavenMetadata, error) 
 			log.Error(err, "failed to close response body")
 		}
 	}()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodySize))
+		if err != nil {
+			return MavenMetadata{}, fmt.Errorf(
+				"fetch Maven metadata: unexpected HTTP status %s (failed to read response body: %w)",
+				resp.Status,
+				err,
+			)
+		}
+
+		// We log the content of the error but we better not report as it ends up in the
+		// failing condition (could be a big chunk of code). This is likely useful info
+		// for admin that can access to operator log.
+		log.Infof("http call to %s errored with status code %d: %s", url, resp.StatusCode, strings.TrimSpace(string(body)))
+
+		return MavenMetadata{}, fmt.Errorf(
+			"fetch Maven metadata: unexpected HTTP status %s from url %s",
+			resp.Status,
+			url,
+		)
+	}
 
 	var metadata MavenMetadata
 
