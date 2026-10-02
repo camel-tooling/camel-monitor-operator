@@ -214,10 +214,10 @@ test-common: gotestfmt-install
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
-# A subset of common tests, does not require a Camel K operator
+# A subset of common tests, does not require a Camel K operator and excludes Camel Main tests.
 test-common-smoke: gotestfmt-install
 	FAILED=0; \
-	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/deployment* --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/deployment* --parallel 1 -skip 'Main$$' -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
 # Used for arm64 arch test, as Camel K provides those platform images out of the box
