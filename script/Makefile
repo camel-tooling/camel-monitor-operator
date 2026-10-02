@@ -107,7 +107,8 @@ else
 $(error Could not retrieve a valid Git Commit)
 endif
 GOLDFLAGS += -X 'github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.BuildProvider=$(BUILD_PROVIDER)'
-GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelMainMavenMetadata=$(BUILD_MAVEN_BASE_REPO)
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults.DefaultMavenBaseRepo=$(BUILD_MAVEN_BASE_REPO)
+GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelMainMavenMetadata=$(BUILD_MAVEN_MAIN_META)
 GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelQuarkusMavenMetadata=$(BUILD_MAVEN_QUARKUS_META)
 GOLDFLAGS += -X github.com/camel-tooling/camel-monitor-operator/pkg/controller/camel-monitor/releases.defaultCamelSpringBootMavenMetadata=$(BUILD_MAVEN_SPRINGBOOT_META)
 
