@@ -236,17 +236,26 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 	}
 
 	var (
-		mavenMeta MavenMetadata
-		err       error
+		mavenMeta      MavenMetadata
+		currentVersion string
+		err            error
 	)
 
+	// Fetch the latest BOM version for the runtime and select the local version to compare against.
+	// Each runtime BOM uses its own versioning scheme matching RuntimeVersion:
+	//   - Quarkus: quarkus-camel-bom versioned as the Quarkus platform (e.g. 3.40.1)
+	//   - Spring-Boot: camel-spring-boot-bom versioned as Camel (e.g. 4.22.1)
+	//   - Main: camel-bom versioned as Camel (e.g. 4.22.1)
 	switch runtimeInfo.RuntimeProvider {
 	case "Quarkus":
 		mavenMeta, err = GetCamelQuarkusMetadata(ctx)
+		currentVersion = runtimeInfo.RuntimeVersion
 	case "Spring-Boot":
 		mavenMeta, err = GetCamelSpringBootMetadata(ctx)
+		currentVersion = runtimeInfo.CamelVersion
 	case "Main":
 		mavenMeta, err = GetCamelMainMetadata(ctx)
+		currentVersion = runtimeInfo.RuntimeVersion
 	default:
 		err = errors.New("unknown runtime provider " + runtimeInfo.RuntimeProvider)
 	}
@@ -254,16 +263,20 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 	conditionType := "UpgradeAvailable"
 	statusCondition := metav1.ConditionFalse
 	reason := "UpToDate"
-	message := "camel version is up to date with latest release"
+	message := "runtime version is up to date with latest release"
 
 	if err != nil {
 		statusCondition = metav1.ConditionUnknown
 		reason = "FetchingError"
 		message = "could not fetch repository: " + err.Error()
-	} else if mavenMeta.Versioning.Release != "" && mavenMeta.Versioning.Release != runtimeInfo.RuntimeVersion {
+	} else if mavenMeta.Versioning.Release != "" && mavenMeta.Versioning.Release != currentVersion {
 		statusCondition = metav1.ConditionTrue
 		reason = "NewVersionAvailable"
 		message = "New Camel " + runtimeInfo.RuntimeProvider + " runtime version " + mavenMeta.Versioning.Release + " is available"
+
+		if runtimeInfo.RuntimeProvider == "Quarkus" {
+			message += " (Camel " + runtimeInfo.CamelVersion + ")"
+		}
 	}
 
 	targetAppStatus.AddCondition(metav1.Condition{

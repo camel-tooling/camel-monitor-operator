@@ -261,6 +261,7 @@ func TestCheckVersionUpgradeMainIsTrue(t *testing.T) {
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Main",
 		RuntimeVersion:  "4.21.0",
+		CamelVersion:    "4.21.0",
 	}, status)
 
 	require.Len(t, status.Conditions, 1)
@@ -290,6 +291,7 @@ func TestCheckVersionUpgradeMainIsFalse(t *testing.T) {
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Main",
 		RuntimeVersion:  "4.22.0",
+		CamelVersion:    "4.22.0",
 	}, status)
 
 	require.Len(t, status.Conditions, 1)
@@ -319,6 +321,7 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Quarkus",
 		RuntimeVersion:  "3.38.0",
+		CamelVersion:    "4.20.0",
 	}, status)
 
 	require.Len(t, status.Conditions, 1)
@@ -347,7 +350,8 @@ func TestCheckVersionUpgradeSpringBootIsTrue(t *testing.T) {
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Spring-Boot",
-		RuntimeVersion:  "4.21.0",
+		RuntimeVersion:  "4.0.5",
+		CamelVersion:    "4.21.0",
 	}, status)
 
 	require.Len(t, status.Conditions, 1)
