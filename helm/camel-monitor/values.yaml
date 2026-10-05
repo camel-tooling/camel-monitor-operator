@@ -26,6 +26,7 @@ operator:
   tolerations: []
   nodeSelector: {}
   logLevel: "info"
+  checkVersionUpgrade: "true"
   ## Deployment annotations
   annotations:
   serviceAccount:

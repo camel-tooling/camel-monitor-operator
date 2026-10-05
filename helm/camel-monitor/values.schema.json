@@ -151,6 +151,12 @@
           "enum": ["debug", "info", "warn", "error", "fatal", "panic"],
           "default": "info"
         },
+        "checkVersionUpgrade": {
+          "type": "string",
+          "description": "Enable checking if a new Camel runtime version is available",
+          "enum": ["true", "false"],
+          "default": "true"
+        },
         "annotations": {
           "type": ["object", "null"],
           "description": "Annotations to add to the deployment",
