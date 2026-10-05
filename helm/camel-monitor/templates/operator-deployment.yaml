@@ -68,6 +68,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_ID
               value: {{ .Values.operator.operatorId }}
+            - name: CHECK_VERSION_UPGRADE
+              value: {{ .Values.operator.checkVersionUpgrade | quote }}
             {{- with .Values.operator.extraEnv }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
