@@ -243,3 +243,7 @@ func TestCamelQuarkusMavenMetadata404(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "fetch Maven metadata: unexpected HTTP status 404 Not Found from url")
 }
+
+func TestMetadataURLBuilder(t *testing.T) {
+	assert.Equal(t, "https://repo1.maven.org/maven2/path/to/metadata", buildMetadataURL("path/to/metadata"))
+}
