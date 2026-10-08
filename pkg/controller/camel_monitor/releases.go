@@ -54,13 +54,13 @@ var (
 	releaseUpdateHttpClient = &http.Client{
 		Timeout: 10 * time.Second,
 	}
+
+	defaultCamelMainMavenMetadata       = "org/apache/camel/camel-core/maven-metadata.xml"
+	defaultCamelQuarkusMavenMetadata    = "io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml"
+	defaultCamelSpringBootMavenMetadata = "org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
 )
 
 const (
-	defaultCamelMainMavenMetadata       = defaults.DefaultMavenBaseRepo + "org/apache/camel/camel-core/maven-metadata.xml"
-	defaultCamelQuarkusMavenMetadata    = defaults.DefaultMavenBaseRepo + "io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml"
-	defaultCamelSpringBootMavenMetadata = defaults.DefaultMavenBaseRepo + "org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
-
 	cacheMetadataTTL = 24 * time.Hour
 	maxErrorBodySize = 16 * 1024
 )
@@ -69,7 +69,7 @@ const (
 func GetCamelMainMetadata(ctx context.Context) (MavenMetadata, error) {
 	camelMainMavenMetadataURL := os.Getenv("CAMEL_MAIN_MAVEN_META_URL")
 	if camelMainMavenMetadataURL == "" {
-		camelMainMavenMetadataURL = defaultCamelMainMavenMetadata
+		camelMainMavenMetadataURL = buildMetadataURL(defaultCamelMainMavenMetadata)
 	}
 
 	meta, err := getMavenMetadata(ctx, camelMainMetadataCache, camelMainMavenMetadataURL)
@@ -86,7 +86,7 @@ func GetCamelMainMetadata(ctx context.Context) (MavenMetadata, error) {
 func GetCamelQuarkusMetadata(ctx context.Context) (MavenMetadata, error) {
 	camelQuarkusMavenMetadataURL := os.Getenv("CAMEL_QUARKUS_MAVEN_META_URL")
 	if camelQuarkusMavenMetadataURL == "" {
-		camelQuarkusMavenMetadataURL = defaultCamelQuarkusMavenMetadata
+		camelQuarkusMavenMetadataURL = buildMetadataURL(defaultCamelQuarkusMavenMetadata)
 	}
 
 	meta, err := getMavenMetadata(ctx, camelQuarkusMetadataCache, camelQuarkusMavenMetadataURL)
@@ -103,7 +103,7 @@ func GetCamelQuarkusMetadata(ctx context.Context) (MavenMetadata, error) {
 func GetCamelSpringBootMetadata(ctx context.Context) (MavenMetadata, error) {
 	camelSpringBootMavenMetadataURL := os.Getenv("CAMEL_SPRING_BOOT_MAVEN_META_URL")
 	if camelSpringBootMavenMetadataURL == "" {
-		camelSpringBootMavenMetadataURL = defaultCamelSpringBootMavenMetadata
+		camelSpringBootMavenMetadataURL = buildMetadataURL(defaultCamelSpringBootMavenMetadata)
 	}
 
 	meta, err := getMavenMetadata(ctx, camelSpringBootMetadataCache, camelSpringBootMavenMetadataURL)
@@ -114,6 +114,10 @@ func GetCamelSpringBootMetadata(ctx context.Context) (MavenMetadata, error) {
 	camelSpringBootMetadataCache = &meta
 
 	return *camelSpringBootMetadataCache, nil
+}
+
+func buildMetadataURL(meta string) string {
+	return defaults.DefaultMavenBaseRepo + meta
 }
 
 // getMavenMetadata recover the metadata as expected in maven-metadata.xml file
