@@ -23,7 +23,7 @@ metadata:
     console.openshift.io/plugins: '["camel-dashboard-console"]'
     categories: Observability
     certified: "false"
-    containerImage: quay.io/camel-tooling/camel-monitor-operator:0.3.0-SNAPSHOT
+    containerImage: quay.io/camel-tooling/camel-monitor-operator:1.0.0-SNAPSHOT
     createdAt: 2026-04-20T10:13:31Z
     description: Camel Monitor Operator is the monitoring tool for your Apache Camel applications running on cloud.
     operators.operatorframework.io/builder: operator-sdk-v1.16.0
@@ -31,7 +31,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/camel-tooling/camel-monitor-operator
     support: Camel
-  name: camel-monitor-operator.v0.3.0
+  name: camel-monitor-operator.v1.0.0
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -103,4 +103,4 @@ spec:
   selector:
     matchLabels:
       name: camel-monitor-operator
-  version: 0.3.0
+  version: 1.0.0
