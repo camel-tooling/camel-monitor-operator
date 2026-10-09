@@ -23,7 +23,7 @@ package defaults
 
 const (
 	// Version -- .
-	Version = "0.3.0-SNAPSHOT"
+	Version = "1.1.0-SNAPSHOT"
 	// BuildProvider -- .
 	BuildProvider = "Camel Tooling"
 	// DefaultMavenBaseRepo -- .
