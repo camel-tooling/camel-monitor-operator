@@ -19,7 +19,6 @@ name: prometheus
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  CAMEL_K_VERSION: 2.11.0
 
 on:
   pull_request:
@@ -78,20 +77,6 @@ jobs:
         kubectl create ns camel
         make install-k8s-global
         kubectl wait --for=condition=available deployment/camel-monitor-operator --timeout=180s -n camel
-
-    # Very useful to create testing application on the fly
-    - name: Install Camel K operator
-      shell: bash
-      run: |
-        REGISTRY=$(kubectl -n kube-system get service registry -o jsonpath='{.spec.clusterIP}')
-
-        kubectl create ns camel-k
-        kubectl create configmap camel-k-operator-configmap-configuration \
-          --from-literal=REGISTRY_ADDRESS="$REGISTRY" \
-          -n camel-k
-
-        kubectl apply -k github.com/apache/camel-k/install/overlays/all-namespaces?ref=v$CAMEL_K_VERSION --server-side
-        kubectl wait --for=condition=available deployment/camel-k-operator --timeout=180s -n camel-k
 
     - name: Run test
       shell: bash
