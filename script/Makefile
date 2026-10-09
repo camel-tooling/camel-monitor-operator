@@ -234,6 +234,23 @@ test-prometheus: gotestfmt-install
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/prometheus/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
+# Prometheus tests querying OpenShift User-Workload-Monitoring (thanos-querier).
+# Camel Main is skipped (-skip 'Main$$') because its sample image is not published downstream.
+# Prerequisites to install beforehand:
+#   - UWM enabled, and `oc login` with an identity holding the cluster-monitoring-view ClusterRole
+#     (needed by the scrape test to query thanos-querier).
+#   - grafana-operator watching all namespaces, plus a Grafana instance labelled
+#     camel.apache.org/grafana=camel-monitor-operator (needed by the Grafana dashboard test).
+test-prometheus-ocp: gotestfmt-install
+	FAILED=0; \
+	PROMETHEUS_PF_NAMESPACE=openshift-monitoring \
+	PROMETHEUS_PF_SERVICE=thanos-querier \
+	PROMETHEUS_PF_PORT=9091 \
+	PROMETHEUS_SCHEME=https \
+	PROMETHEUS_TOKEN=$$(oc whoami -t) \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/prometheus/... --parallel 1 -skip 'Main$$' -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	exit $${FAILED}
+
 test-install-olm: gotestfmt-install
 	FAILED=0; \
 	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 20m -v ./e2e/install/olm -tags=integration $(GOTESTFMT) || ((FAILED++)); \
