@@ -140,7 +140,7 @@ func rebaseRefs(schema map[string]any) {
 }
 
 func loadDslSchema(filename string) (map[string]any, error) {
-	bytes, err := os.ReadFile(filepath.Clean(filename))
+	bytes, err := os.ReadFile(filepath.Clean(filename)) //nolint:gosec // G703
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func loadDslSchema(filename string) (map[string]any, error) {
 }
 
 func loadCrdSchema(filename string) (*apiextensionsv1.JSONSchemaProps, error) {
-	bytes, err := os.ReadFile(filepath.Clean(filename))
+	bytes, err := os.ReadFile(filepath.Clean(filename)) //nolint:gosec // G703
 	if err != nil {
 		return nil, err
 	}
