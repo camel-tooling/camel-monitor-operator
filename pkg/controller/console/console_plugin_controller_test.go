@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -224,6 +225,43 @@ func TestEnsureConsolePlugin_Update(t *testing.T) {
 	assert.Equal(t, consolev1.Service, cp.Spec.Backend.Type)
 }
 
+func TestEnsureNetworkPolicy_Create(t *testing.T) {
+	r := newTestReconciler(t)
+
+	err := r.ensureNetworkPolicy(context.TODO(), testOwnerRef)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
+	require.NoError(t, err)
+	assert.Equal(t, pluginName, np.Name)
+	assert.Equal(t, commonLabels(), np.Labels)
+	require.Len(t, np.Spec.Ingress, 1)
+	require.Len(t, np.Spec.Ingress[0].Ports, 1)
+	assert.Equal(t, int32(pluginPort), np.Spec.Ingress[0].Ports[0].Port.IntVal)
+}
+
+func TestEnsureNetworkPolicy_Update(t *testing.T) {
+	existing := &networkingv1.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pluginName,
+			Namespace: testNamespace,
+			Labels:    map[string]string{"old": "label"},
+		},
+		Spec: networkingv1.NetworkPolicySpec{},
+	}
+	r := newTestReconciler(t, existing)
+
+	err := r.ensureNetworkPolicy(context.TODO(), testOwnerRef)
+	require.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
+	require.NoError(t, err)
+	assert.Equal(t, commonLabels(), np.Labels)
+	assert.Equal(t, int32(pluginPort), np.Spec.Ingress[0].Ports[0].Port.IntVal)
+}
+
 func TestEnsureAllResources(t *testing.T) {
 	r := newTestReconciler(t)
 
@@ -244,6 +282,10 @@ func TestEnsureAllResources(t *testing.T) {
 
 	cp := &consolev1.ConsolePlugin{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName}, cp)
+	assert.NoError(t, err)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
 	assert.NoError(t, err)
 }
 
@@ -276,6 +318,12 @@ func TestEnsureAllResources_OwnerRefs(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName}, cp)
 	require.NoError(t, err)
 	assert.Empty(t, cp.OwnerReferences)
+
+	np := &networkingv1.NetworkPolicy{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
+	require.NoError(t, err)
+	require.Len(t, np.OwnerReferences, 1)
+	assert.Equal(t, operatorDeploymentName, np.OwnerReferences[0].Name)
 }
 
 func TestHandleUninstall(t *testing.T) {
