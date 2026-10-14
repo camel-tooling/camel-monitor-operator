@@ -30,6 +30,7 @@ import (
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -259,7 +260,12 @@ func (r *reconciler) ensureAllResources(ctx context.Context, ownerRef metav1.Own
 		return err
 	}
 
-	return r.ensureConsolePlugin(ctx)
+	err = r.ensureConsolePlugin(ctx)
+	if err != nil {
+		return err
+	}
+
+	return r.ensureNetworkPolicy(ctx, ownerRef)
 }
 
 func (r *reconciler) ensureConfigMap(ctx context.Context, ownerRef metav1.OwnerReference) error {
@@ -317,6 +323,21 @@ func (r *reconciler) ensureConsolePlugin(ctx context.Context) error {
 		p := consolePlugin(r.namespace)
 		cp.Labels = p.Labels
 		cp.Spec = p.Spec
+
+		return nil
+	})
+}
+
+func (r *reconciler) ensureNetworkPolicy(ctx context.Context, ownerRef metav1.OwnerReference) error {
+	tnp := &networkingv1.NetworkPolicy{
+		Name:      pluginName,
+		Namespace: r.namespace}
+
+	return r.createOrUpdate(ctx, tnp, func() error {
+		np := networkPolicy(r.namespace)
+		tnp.Spec = np.Spec
+		tnp.Labels = np.Labels
+		setOwnerRef(tnp, ownerRef)
 
 		return nil
 	})
