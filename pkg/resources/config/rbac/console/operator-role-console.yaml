@@ -81,4 +81,7 @@ rules:
   - camel-dashboard-console
   verbs:
   - get
+  # Needed also here to prevent Conforma policy warning
+  - create
   - update
+  - delete
