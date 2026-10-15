@@ -46,6 +46,7 @@ func TestNginxConfig(t *testing.T) {
 	assert.Contains(t, cfg, `X-Content-Type-Options "nosniff"`)
 	assert.Contains(t, cfg, `Strict-Transport-Security "max-age=31536000; includeSubDomains"`)
 	assert.Contains(t, cfg, `Content-Security-Policy "default-src 'none'`)
+	assert.Contains(t, cfg, "try_files $uri /locales/en/")
 }
 
 func TestDeployment(t *testing.T) {

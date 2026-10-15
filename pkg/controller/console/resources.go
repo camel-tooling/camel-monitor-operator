@@ -64,6 +64,10 @@ http {
     add_header X-Content-Type-Options "nosniff" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+
+    location ~ ^/locales/(.+)/(.+)$ {
+      try_files $uri /locales/en/$2 =404;
+    }
   }
 }
 `
