@@ -41,6 +41,11 @@ func TestNginxConfig(t *testing.T) {
 	assert.Contains(t, cfg, "listen              9443 ssl")
 	assert.Contains(t, cfg, "ssl_certificate     /var/cert/tls.crt")
 	assert.Contains(t, cfg, "ssl_certificate_key /var/cert/tls.key")
+	assert.Contains(t, cfg, "server_tokens       off")
+	assert.Contains(t, cfg, `X-Frame-Options "DENY"`)
+	assert.Contains(t, cfg, `X-Content-Type-Options "nosniff"`)
+	assert.Contains(t, cfg, `Strict-Transport-Security "max-age=31536000; includeSubDomains"`)
+	assert.Contains(t, cfg, `Content-Security-Policy "default-src 'none'`)
 }
 
 func TestDeployment(t *testing.T) {
