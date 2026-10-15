@@ -52,12 +52,18 @@ http {
   include            /etc/nginx/mime.types;
   default_type       application/octet-stream;
   keepalive_timeout  65;
+  server_tokens       off;
   server {
     listen              %d ssl;
     listen              [::]:%d ssl;
     ssl_certificate     /var/cert/tls.crt;
     ssl_certificate_key /var/cert/tls.key;
     root                /usr/share/nginx/html;
+
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
   }
 }
 `
