@@ -74,6 +74,14 @@ func init() {
 
 func WithNewTestNamespace(t *testing.T, doRun func(context.Context, *gomega.WithT, string)) {
 	ns := NewTestNamespace(t, testContext)
+	fmt.Println("Created namespace", ns.GetName())
+
+	if os.Getenv("E2E_IMAGE_PULL_SECRET_NAMESPACE") != "" && os.Getenv("E2E_IMAGE_PULL_SECRET_NAME") != "" {
+		preparePullSecret(t, testContext,
+			os.Getenv("E2E_IMAGE_PULL_SECRET_NAMESPACE"), os.Getenv("E2E_IMAGE_PULL_SECRET_NAME"),
+			ns.GetName(),
+		)
+	}
 	defer deleteTestNamespace(t, testContext, ns)
 
 	invokeUserTestCode(t, testContext, ns.GetName(), doRun)
@@ -433,4 +441,45 @@ func getCamelAppVersion() string {
 	}
 
 	return camelAppVersion
+}
+
+// preparePullSecret is in charge to copy a secret provided in a given namespace in the current namespace
+// and to prepare the "default" ServiceAccount (used to deploy applications) to use that as pull-secret by default.
+func preparePullSecret(t *testing.T, ctx context.Context, secretNamespace, secretName, targetNamespace string) {
+	t.Helper()
+	t.Logf("Preparing image pull secret for %s namespace", targetNamespace)
+
+	if secretNamespace != targetNamespace {
+		getSecretCmd := exec.CommandContext(ctx, "kubectl", "get", "secret", secretName, "-n", secretNamespace, "-o", "json")
+		secretJSON, err := getSecretCmd.Output()
+		if err != nil {
+			t.Fatalf("failed to get secret %s from %s: %v", secretName, secretNamespace, err)
+		}
+
+		// Apply secret to target namespace
+		applyCmd := exec.CommandContext(ctx, "kubectl", "apply", "-n", targetNamespace, "-f", "-")
+		applyCmd.Stdin = strings.NewReader(string(secretJSON))
+		if out, err := applyCmd.CombinedOutput(); err != nil {
+			t.Fatalf("failed to copy secret to %s: %s: %v", targetNamespace, string(out), err)
+		}
+	}
+
+	// 2. Patch the default ServiceAccount in target namespace
+	patchJSON := fmt.Sprintf(`{"imagePullSecrets": [{"name": "%s"}]}`, secretName)
+	patchCmd := exec.CommandContext(
+		ctx,
+		"kubectl",
+		"patch",
+		"serviceaccount",
+		"default",
+		"-p", patchJSON,
+		"-n", targetNamespace,
+	)
+
+	out, err := patchCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("failed to patch serviceaccount in namespace %s: %s: %v", targetNamespace, string(out), err)
+	}
+
+	t.Logf("Successfully patched serviceaccount/default with pull secret %s", secretName)
 }
