@@ -70,6 +70,8 @@ spec:
               value: {{ .Values.operator.operatorId }}
             - name: CHECK_VERSION_UPGRADE
               value: {{ .Values.operator.checkVersionUpgrade | quote }}
+            - name: KEDA_SCALER_PORT
+              value: "9666"
             {{- with .Values.operator.extraEnv }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
@@ -85,6 +87,8 @@ spec:
           ports:
             - containerPort: 8080
               name: metrics
+            - containerPort: 9666
+              name: keda-scaler
           {{- with .Values.operator.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
