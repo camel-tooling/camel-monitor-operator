@@ -54,6 +54,8 @@ spec:
           ports:
             - containerPort: 8080
               name: metrics
+            - containerPort: 9666
+              name: keda-scaler
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
@@ -75,6 +77,9 @@ spec:
             # if the CRD is detected on the cluster
             - name: CREATE_GRAFANA_DASHBOARD
               value: "true"
+            # Enable KEDA external scaler gRPC server on the given port (omit or leave empty to disable)
+            - name: KEDA_SCALER_PORT
+              value: "9666"
             # Datasource where to extract metrics from
             - name: GRAFANA_DS
               value: "prometheus"

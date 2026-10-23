@@ -56,6 +56,9 @@ const (
 	defaultGrafanaDatasource                  = "prometheus"
 	defaultMaxIdleSec                     int = 60
 
+	KedaScalerPortEnvVariable = "KEDA_SCALER_PORT"
+	DefaultKedaScalerPort     = 9666
+
 	OperatorLockName = "camel-monitor-lock"
 )
 
@@ -214,6 +217,16 @@ func GetObservabilityMetricsPorts() (bool, []string) {
 	}
 
 	return true, DefaultObservabilityPorts
+}
+
+// GetKedaScalerPort returns the port configured for the KEDA external scaler gRPC server.
+// If the env variable is set, it returns the configured port. Otherwise, it returns 0 (disabled).
+func GetKedaScalerPort() int {
+	if portVal, envSet := os.LookupEnv(KedaScalerPortEnvVariable); envSet && strings.TrimSpace(portVal) != "" {
+		return getOperatorEnvAsInt(KedaScalerPortEnvVariable, "keda external scaler port", DefaultKedaScalerPort)
+	}
+
+	return 0
 }
 
 // GetObservabilityMetricsEndpoints returns if the endpoint is the default one and the configured for the Prometheus metrics.

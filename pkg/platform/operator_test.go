@@ -98,6 +98,18 @@ func TestGetObservabilityMetrics_Default(t *testing.T) {
 	assert.Equal(t, DefaultObservabilityMetrics, val)
 }
 
+func TestGetKedaScalerPort(t *testing.T) {
+	t.Run("disabled when env unset", func(t *testing.T) {
+		t.Setenv(KedaScalerPortEnvVariable, "")
+		assert.Equal(t, 0, GetKedaScalerPort())
+	})
+
+	t.Run("custom port when env set", func(t *testing.T) {
+		t.Setenv(KedaScalerPortEnvVariable, "9999")
+		assert.Equal(t, 9999, GetKedaScalerPort())
+	})
+}
+
 func TestGetObservabilityHealth_Default(t *testing.T) {
 	t.Setenv(CamelMonitorObservabilityHealth, "")
 	isDefault, val := GetObservabilityHealthEndpoints()
