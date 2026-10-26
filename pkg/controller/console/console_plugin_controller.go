@@ -46,9 +46,8 @@ import (
 )
 
 const (
-	consoleImageEnv        = "OPENSHIFT_CONSOLE_PLUGIN_IMAGE"
-	operatorDeploymentName = "camel-monitor-operator"
-	operatorCSVPrefix      = "camel-monitor-operator."
+	consoleImageEnv   = "OPENSHIFT_CONSOLE_PLUGIN_IMAGE"
+	operatorCSVPrefix = platform.DefaultOperatorName + "."
 )
 
 var log = logutil.Log.WithName("console")
@@ -151,7 +150,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	operatorDeploy := &appsv1.Deployment{}
 
 	err := r.reader.Get(ctx, types.NamespacedName{
-		Name:      operatorDeploymentName,
+		Name:      platform.DefaultOperatorName,
 		Namespace: r.namespace,
 	}, operatorDeploy)
 	if err != nil {

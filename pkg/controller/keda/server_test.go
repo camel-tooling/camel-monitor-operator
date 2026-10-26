@@ -26,6 +26,7 @@ import (
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util"
 	"github.com/kedacore/keda/v2/pkg/scalers/externalscaler"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func getFreePort() (int, error) {
+func getFreePort() (int32, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
 		return 0, err
@@ -45,7 +46,13 @@ func getFreePort() (int, error) {
 		return 0, err
 	}
 	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
+
+	freePortToInt32, err := util.IToInt32(l.Addr().(*net.TCPAddr).Port)
+	if err != nil {
+		return 0, nil
+	}
+
+	return *freePortToInt32, nil
 }
 
 func TestServerLifecycleAndGRPC(t *testing.T) {

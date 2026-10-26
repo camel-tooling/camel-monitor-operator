@@ -31,11 +31,11 @@ import (
 // Server wraps the gRPC external scaler server and implements manager.Runnable.
 type Server struct {
 	client client.Client
-	port   int
+	port   int32
 }
 
 // NewServer creates a new KEDA external scaler Server.
-func NewServer(client client.Client, port int) *Server {
+func NewServer(client client.Client, port int32) *Server {
 	return &Server{
 		client: client,
 		port:   port,

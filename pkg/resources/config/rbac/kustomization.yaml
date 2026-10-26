@@ -24,3 +24,4 @@ kind: Kustomization
 resources:
 - operator-role-leases.yaml
 - operator-role-binding-leases.yaml
+- keda

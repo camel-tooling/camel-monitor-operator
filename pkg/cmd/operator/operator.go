@@ -53,9 +53,9 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/controller"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/controller/keda"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/controller/synthetic"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
-	"github.com/camel-tooling/camel-monitor-operator/pkg/scaler/keda"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults"
 	logutil "github.com/camel-tooling/camel-monitor-operator/pkg/util/log"
@@ -206,8 +206,9 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	kedaScalerPort := platform.GetKedaScalerPort()
 	if kedaScalerPort > 0 {
 		log.Infof("Configuring KEDA external scaler on port %d", kedaScalerPort)
-		scalerServer := keda.NewServer(ctrlClient, kedaScalerPort)
-		exitOnError(mgr.Add(scalerServer), "Could not add KEDA external scaler to manager")
+		int32Port, err := util.IToInt32(kedaScalerPort)
+		exitOnError(err, "Could not convert KEDA scaler port")
+		exitOnError(mgr.Add(keda.NewServiceController(mgr, ctrlClient, *int32Port)), "Could not add KEDA scaler controller to manager")
 	}
 
 	if platform.GetCheckVersionUpgrade() == "true" {

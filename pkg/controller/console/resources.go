@@ -20,6 +20,7 @@ package console
 import (
 	"fmt"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	consolev1 "github.com/openshift/api/console/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +34,6 @@ const (
 	pluginName     = "camel-dashboard-console"
 	pluginPort     = 9443
 	certSecretName = "camel-dashboard-console-cert"
-	managedBy      = "camel-monitor-operator"
 )
 
 func commonLabels() map[string]string {
@@ -41,7 +41,7 @@ func commonLabels() map[string]string {
 		"app":                          pluginName,
 		"app.kubernetes.io/name":       pluginName,
 		"app.kubernetes.io/part-of":    pluginName,
-		"app.kubernetes.io/managed-by": managedBy,
+		"app.kubernetes.io/managed-by": platform.DefaultOperatorName,
 	}
 }
 

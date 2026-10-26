@@ -168,7 +168,7 @@ func createSyntheticCamelMonitor(ctx context.Context, c client.Client, app *v1al
 		app.Name += suffix
 	}
 
-	return c.Create(ctx, app, ctrl.FieldOwner("camel-monitor-operator"))
+	return c.Create(ctx, app, ctrl.FieldOwner(platform.DefaultOperatorName))
 }
 
 func deleteSyntheticCamelMonitor(ctx context.Context, c client.Client, namespace, name string) error {

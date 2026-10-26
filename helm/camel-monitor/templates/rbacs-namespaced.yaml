@@ -110,6 +110,29 @@ kind: Role
 metadata:
   labels:
     app: camel-monitor
+  name: camel-monitor-operator-keda
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resourceNames:
+  - camel-monitor-keda-scaler
+  resources:
+  - services
+  verbs:
+  - get
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app: camel-monitor
   name: camel-monitor-operator-leases
 rules:
 - apiGroups:
@@ -196,6 +219,20 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: camel-monitor-operator-grafana
+subjects:
+- kind: ServiceAccount
+  name: camel-monitor-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app: camel-monitor
+  name: camel-monitor-operator-keda
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: camel-monitor-operator-keda
 subjects:
 - kind: ServiceAccount
   name: camel-monitor-operator

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	consolev1 "github.com/openshift/api/console/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,7 @@ const (
 var testOwnerRef = metav1.OwnerReference{
 	APIVersion: "apps/v1",
 	Kind:       "Deployment",
-	Name:       operatorDeploymentName,
+	Name:       platform.DefaultOperatorName,
 	UID:        "test-uid-123",
 	Controller: new(true),
 }
@@ -299,20 +300,20 @@ func TestEnsureAllResources_OwnerRefs(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, cm)
 	require.NoError(t, err)
 	require.Len(t, cm.OwnerReferences, 1)
-	assert.Equal(t, operatorDeploymentName, cm.OwnerReferences[0].Name)
+	assert.Equal(t, platform.DefaultOperatorName, cm.OwnerReferences[0].Name)
 	assert.Equal(t, types.UID("test-uid-123"), cm.OwnerReferences[0].UID)
 
 	deploy := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.OwnerReferences, 1)
-	assert.Equal(t, operatorDeploymentName, deploy.OwnerReferences[0].Name)
+	assert.Equal(t, platform.DefaultOperatorName, deploy.OwnerReferences[0].Name)
 
 	svc := &corev1.Service{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, svc)
 	require.NoError(t, err)
 	require.Len(t, svc.OwnerReferences, 1)
-	assert.Equal(t, operatorDeploymentName, svc.OwnerReferences[0].Name)
+	assert.Equal(t, platform.DefaultOperatorName, svc.OwnerReferences[0].Name)
 
 	cp := &consolev1.ConsolePlugin{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName}, cp)
@@ -323,7 +324,7 @@ func TestEnsureAllResources_OwnerRefs(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
 	require.NoError(t, err)
 	require.Len(t, np.OwnerReferences, 1)
-	assert.Equal(t, operatorDeploymentName, np.OwnerReferences[0].Name)
+	assert.Equal(t, platform.DefaultOperatorName, np.OwnerReferences[0].Name)
 }
 
 func TestHandleUninstall(t *testing.T) {

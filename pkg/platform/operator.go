@@ -29,6 +29,7 @@ import (
 )
 
 const (
+	DefaultOperatorName                   = "camel-monitor-operator"
 	OperatorWatchNamespaceEnvVariable     = "WATCH_NAMESPACE"
 	OperatorNamespaceEnvVariable          = "NAMESPACE"
 	createPrometheusPodMonitorEnvVariable = "CREATE_PROMETHEUS_POD_MONITOR"
@@ -63,9 +64,9 @@ const (
 )
 
 var (
-	defaultPrometheusLabels     = map[string]string{"camel.apache.org/prometheus": "camel-monitor-operator"}
-	defaultGrafanaLabels        = map[string]string{"camel.apache.org/grafana": "camel-monitor-operator"}
-	defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "camel-monitor-operator", "app": "camel-monitor"}
+	defaultPrometheusLabels     = map[string]string{"camel.apache.org/prometheus": DefaultOperatorName}
+	defaultGrafanaLabels        = map[string]string{"camel.apache.org/grafana": DefaultOperatorName}
+	defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": DefaultOperatorName, "app": "camel-monitor"}
 	// DefaultObservabilityHealth priority endpoints: camel opinionated convention, quarkus and spring boot respectively.
 	DefaultObservabilityHealth = []string{"observe/health", "q/health", "actuator/health"}
 	// DefaultObservabilityMetrics priority endpoints: camel opinionated convention, quarkus and spring boot respectively.

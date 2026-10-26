@@ -32,3 +32,14 @@ func IToInt8(x int) (*int8, error) {
 
 	return &casted, nil
 }
+
+// IToInt32 attempts to convert safely an int to an int8.
+func IToInt32(x int) (*int32, error) {
+	if x < math.MinInt32 || x > math.MaxInt32 {
+		return nil, errors.New("integer overflow casting to int32 type")
+	}
+
+	casted := int32(x)
+
+	return &casted, nil
+}

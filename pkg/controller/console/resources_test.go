@@ -20,6 +20,7 @@ package console
 import (
 	"testing"
 
+	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	consolev1 "github.com/openshift/api/console/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestCommonLabels(t *testing.T) {
 	assert.Equal(t, pluginName, labels["app"])
 	assert.Equal(t, pluginName, labels["app.kubernetes.io/name"])
 	assert.Equal(t, pluginName, labels["app.kubernetes.io/part-of"])
-	assert.Equal(t, managedBy, labels["app.kubernetes.io/managed-by"])
+	assert.Equal(t, platform.DefaultOperatorName, labels["app.kubernetes.io/managed-by"])
 }
 
 func TestNginxConfig(t *testing.T) {
