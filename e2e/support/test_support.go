@@ -437,7 +437,7 @@ func CamelRegularAppSpringBoot() string {
 func getCamelAppVersion() string {
 	camelAppVersion := os.Getenv("CAMEL_APP_VERSION")
 	if camelAppVersion == "" {
-		camelAppVersion = "4.22.0"
+		camelAppVersion = "4.22.1"
 	}
 
 	return camelAppVersion
