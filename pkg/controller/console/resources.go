@@ -41,7 +41,7 @@ func commonLabels() map[string]string {
 		"app":                          pluginName,
 		"app.kubernetes.io/name":       pluginName,
 		"app.kubernetes.io/part-of":    pluginName,
-		"app.kubernetes.io/managed-by": platform.DefaultOperatorName,
+		"app.kubernetes.io/managed-by": platform.GetOperatorDeploymentName(),
 	}
 }
 

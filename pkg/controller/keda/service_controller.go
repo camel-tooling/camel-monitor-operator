@@ -22,11 +22,9 @@ import (
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -81,12 +79,7 @@ func (s *ServiceController) Start(ctx context.Context) error {
 		return nil
 	}
 
-	operatorDeploy := &appsv1.Deployment{}
-
-	err := s.reader.Get(ctx, types.NamespacedName{
-		Name:      platform.DefaultOperatorName,
-		Namespace: s.namespace,
-	}, operatorDeploy)
+	operatorDeploy, err := platform.GetOperatorDeployment(ctx, s.reader, s.namespace)
 	if err != nil {
 		return err
 	}
@@ -141,7 +134,7 @@ func buildScalerService(namespace string, port int32) *corev1.Service {
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
 			Selector: map[string]string{
-				"name": platform.DefaultOperatorName,
+				"name": platform.GetOperatorDeploymentName(),
 			},
 			Ports: []corev1.ServicePort{
 				{

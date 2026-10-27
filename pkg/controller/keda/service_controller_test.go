@@ -41,7 +41,7 @@ const (
 var testOwnerRef = metav1.OwnerReference{
 	APIVersion: "apps/v1",
 	Kind:       "Deployment",
-	Name:       platform.DefaultOperatorName,
+	Name:       platform.GetOperatorDeploymentName(),
 	UID:        "test-uid-abc",
 	Controller: new(true),
 }
@@ -75,7 +75,7 @@ func TestBuildScalerService(t *testing.T) {
 	assert.Equal(t, ScalerServiceName, svc.Name)
 	assert.Equal(t, testNamespace, svc.Namespace)
 	assert.Equal(t, corev1.ServiceTypeClusterIP, svc.Spec.Type)
-	assert.Equal(t, map[string]string{"name": platform.DefaultOperatorName}, svc.Spec.Selector)
+	assert.Equal(t, map[string]string{"name": platform.GetOperatorDeploymentName()}, svc.Spec.Selector)
 	require.Len(t, svc.Spec.Ports, 1)
 	assert.Equal(t, "grpc", svc.Spec.Ports[0].Name)
 	assert.Equal(t, int32(testPort), svc.Spec.Ports[0].Port)
@@ -120,7 +120,7 @@ func TestEnsureService_Create_SetsOwnerReference(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, svc.OwnerReferences, 1)
-	assert.Equal(t, platform.DefaultOperatorName, svc.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), svc.OwnerReferences[0].Name)
 	assert.Equal(t, types.UID("test-uid-abc"), svc.OwnerReferences[0].UID)
 	assert.Equal(t, "Deployment", svc.OwnerReferences[0].Kind)
 	require.NotNil(t, svc.OwnerReferences[0].Controller)
@@ -150,7 +150,7 @@ func TestEnsureService_Update_UpdatesPortAndOwner(t *testing.T) {
 	updatedOwner := metav1.OwnerReference{
 		APIVersion: "apps/v1",
 		Kind:       "Deployment",
-		Name:       platform.DefaultOperatorName,
+		Name:       platform.GetOperatorDeploymentName(),
 		UID:        "new-uid-xyz",
 		Controller: new(true),
 	}
@@ -211,7 +211,7 @@ func TestStart_OperatorDeploymentNotFound(t *testing.T) {
 func TestStart_CreatesServiceWithOwnerRef(t *testing.T) {
 	operatorDeploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      platform.DefaultOperatorName,
+			Name:      platform.GetOperatorDeploymentName(),
 			Namespace: testNamespace,
 			UID:       "deploy-uid-999",
 		},
@@ -232,5 +232,5 @@ func TestStart_CreatesServiceWithOwnerRef(t *testing.T) {
 	assert.Equal(t, int32(testPort), svc.Spec.Ports[0].Port)
 	require.Len(t, svc.OwnerReferences, 1)
 	assert.Equal(t, types.UID("deploy-uid-999"), svc.OwnerReferences[0].UID)
-	assert.Equal(t, platform.DefaultOperatorName, svc.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), svc.OwnerReferences[0].Name)
 }

@@ -43,7 +43,7 @@ const (
 var testOwnerRef = metav1.OwnerReference{
 	APIVersion: "apps/v1",
 	Kind:       "Deployment",
-	Name:       platform.DefaultOperatorName,
+	Name:       platform.GetOperatorDeploymentName(),
 	UID:        "test-uid-123",
 	Controller: new(true),
 }
@@ -300,20 +300,20 @@ func TestEnsureAllResources_OwnerRefs(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, cm)
 	require.NoError(t, err)
 	require.Len(t, cm.OwnerReferences, 1)
-	assert.Equal(t, platform.DefaultOperatorName, cm.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), cm.OwnerReferences[0].Name)
 	assert.Equal(t, types.UID("test-uid-123"), cm.OwnerReferences[0].UID)
 
 	deploy := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, deploy)
 	require.NoError(t, err)
 	require.Len(t, deploy.OwnerReferences, 1)
-	assert.Equal(t, platform.DefaultOperatorName, deploy.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), deploy.OwnerReferences[0].Name)
 
 	svc := &corev1.Service{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, svc)
 	require.NoError(t, err)
 	require.Len(t, svc.OwnerReferences, 1)
-	assert.Equal(t, platform.DefaultOperatorName, svc.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), svc.OwnerReferences[0].Name)
 
 	cp := &consolev1.ConsolePlugin{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName}, cp)
@@ -324,7 +324,7 @@ func TestEnsureAllResources_OwnerRefs(t *testing.T) {
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pluginName, Namespace: testNamespace}, np)
 	require.NoError(t, err)
 	require.Len(t, np.OwnerReferences, 1)
-	assert.Equal(t, platform.DefaultOperatorName, np.OwnerReferences[0].Name)
+	assert.Equal(t, platform.GetOperatorDeploymentName(), np.OwnerReferences[0].Name)
 }
 
 func TestHandleUninstall(t *testing.T) {

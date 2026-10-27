@@ -33,7 +33,7 @@ func TestCommonLabels(t *testing.T) {
 	assert.Equal(t, pluginName, labels["app"])
 	assert.Equal(t, pluginName, labels["app.kubernetes.io/name"])
 	assert.Equal(t, pluginName, labels["app.kubernetes.io/part-of"])
-	assert.Equal(t, platform.DefaultOperatorName, labels["app.kubernetes.io/managed-by"])
+	assert.Equal(t, platform.GetOperatorDeploymentName(), labels["app.kubernetes.io/managed-by"])
 }
 
 func TestNginxConfig(t *testing.T) {

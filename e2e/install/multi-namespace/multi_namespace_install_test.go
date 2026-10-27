@@ -40,7 +40,7 @@ import (
 * deployed on "tenant-a" and "tenant-b" namespaces only. IMPORTANT: the operator and namespaces have to be created before
 * running the test
  */
-func TestSingleNamespaceInstallation(t *testing.T) {
+func TestMultiNamespaceInstallation(t *testing.T) {
 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
 		// Verify an app running in the outside namespace
 		t.Run("simple Deployment (non-monitored)", func(t *testing.T) {

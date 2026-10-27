@@ -46,11 +46,13 @@ import (
 )
 
 const (
-	consoleImageEnv   = "OPENSHIFT_CONSOLE_PLUGIN_IMAGE"
-	operatorCSVPrefix = platform.DefaultOperatorName + "."
+	consoleImageEnv = "OPENSHIFT_CONSOLE_PLUGIN_IMAGE"
 )
 
-var log = logutil.Log.WithName("console")
+var (
+	operatorCSVPrefix = platform.GetOperatorDeploymentName() + "."
+	log               = logutil.Log.WithName("console")
+)
 
 func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
 	if !platform.IsCurrentOperatorGlobal() {
@@ -147,12 +149,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, r.handleUninstall(ctx)
 	}
 
-	operatorDeploy := &appsv1.Deployment{}
-
-	err := r.reader.Get(ctx, types.NamespacedName{
-		Name:      platform.DefaultOperatorName,
-		Namespace: r.namespace,
-	}, operatorDeploy)
+	operatorDeploy, err := platform.GetOperatorDeployment(ctx, r.reader, r.namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

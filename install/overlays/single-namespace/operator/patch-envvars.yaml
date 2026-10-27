@@ -20,3 +20,9 @@
 - op: add
   path: /spec/template/spec/containers/0/env/0/value
   value: "tenant-a"
+# The name of the Deployment has changed and we must reflect here
+- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: DEPLOYMENT_NAME
+    value: "camel-monitor-operator-tenant-a"
