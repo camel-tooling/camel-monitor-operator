@@ -25,4 +25,4 @@ spec:
       - name: camel-monitor-operator
         env:
         - name: OPENSHIFT_CONSOLE_PLUGIN_IMAGE
-          value: quay.io/camel-tooling/camel-dashboard-console:0.5.1
+          value: quay.io/camel-tooling/camel-dashboard-console:1.0.0
