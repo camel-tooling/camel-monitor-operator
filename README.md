@@ -22,19 +22,19 @@ The operator uses a simple custom resource known as `CamelMonitor` or `cmon` whi
 
 ## Install the operator
 
-To install the Camel Monitor Operator please see the [installation documentation](https://camel-tooling.github.io/camel-dashboard/docs/operator/).
+To install the Camel Monitor Operator please see the [installation documentation](https://camel-tooling.github.io/camel-dashboard/docs/installation-guide/advanced/operator/#installation).
 
 ## Configure a Camel application
 
-To create a new Camel Application or modify an existing Camel Application to be monitored by the Camel Monitor Operator please see the [Camel Application configuration documentation](https://camel-tooling.github.io/camel-dashboard/docs/operator/configuration/import/)
+To create a new Camel Application or modify an existing Camel Application to be monitored by the Camel Monitor Operator please see the [Camel Application configuration documentation](https://camel-tooling.github.io/camel-dashboard/docs/installation-guide/advanced/operator/#camel-application-discovery)
 
 ## Tuning configuration
 
-To review the several configuration you can apply separately to each of your Camel application please see the [tuning documentation](https://camel-tooling.github.io/camel-dashboard/docs/operator/configuration/tuning/)
+To review the several configuration you can apply separately to each of your Camel application please see the [tuning documentation](https://camel-tooling.github.io/camel-dashboard/docs/installation-guide/advanced/operator/#configuration)
 
 ## Openshift plugin
 
-This operator can work standalone and you can use the data exposed in the `CamelMonitor` custom resource accordingly. However it has a great fit with the [Camel Dashboard Console](https://camel-tooling.github.io/camel-dashboard/docs/console/), which is a visual representation of the services exposed by the operator.
+This operator can work standalone and you can use the data exposed in the `CamelMonitor` custom resource accordingly. However it has a great fit with the [Camel Dashboard Console](https://camel-tooling.github.io/camel-dashboard/docs/installation-guide/advanced/console/), which is a visual representation of the services exposed by the operator.
 
 ## Development
 
