@@ -18,6 +18,7 @@ limitations under the License.
 package platform
 
 import (
+	"context"
 	"errors"
 	"os"
 	"strconv"
@@ -26,9 +27,13 @@ import (
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/log"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
+	defaultDeploymentOperatorName         = "camel-monitor-operator"
 	OperatorWatchNamespaceEnvVariable     = "WATCH_NAMESPACE"
 	OperatorNamespaceEnvVariable          = "NAMESPACE"
 	createPrometheusPodMonitorEnvVariable = "CREATE_PROMETHEUS_POD_MONITOR"
@@ -40,6 +45,7 @@ const (
 	GrafanaDatasourceEnvVariable          = "GRAFANA_DS"
 	maxIdleEnvVariable                    = "MAX_IDLE_SEC"
 	checkVersionUpgradeEnvVariable        = "CHECK_VERSION_UPGRADE"
+	deploymentNameEnvVariable             = "DEPLOYMENT_NAME"
 
 	CamelMonitorLabelSelector = "LABEL_SELECTOR"
 
@@ -56,13 +62,16 @@ const (
 	defaultGrafanaDatasource                  = "prometheus"
 	defaultMaxIdleSec                     int = 60
 
+	KedaScalerPortEnvVariable = "KEDA_SCALER_PORT"
+	DefaultKedaScalerPort     = 9666
+
 	OperatorLockName = "camel-monitor-lock"
 )
 
 var (
-	defaultPrometheusLabels     = map[string]string{"camel.apache.org/prometheus": "camel-monitor-operator"}
-	defaultGrafanaLabels        = map[string]string{"camel.apache.org/grafana": "camel-monitor-operator"}
-	defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": "camel-monitor-operator", "app": "camel-monitor"}
+	defaultPrometheusLabels     = map[string]string{"camel.apache.org/prometheus": GetOperatorDeploymentName()}
+	defaultGrafanaLabels        = map[string]string{"camel.apache.org/grafana": GetOperatorDeploymentName()}
+	defaultPrometheusRuleLabels = map[string]string{"camel.apache.org/alerts": GetOperatorDeploymentName(), "app": "camel-monitor"}
 	// DefaultObservabilityHealth priority endpoints: camel opinionated convention, quarkus and spring boot respectively.
 	DefaultObservabilityHealth = []string{"observe/health", "q/health", "actuator/health"}
 	// DefaultObservabilityMetrics priority endpoints: camel opinionated convention, quarkus and spring boot respectively.
@@ -216,6 +225,16 @@ func GetObservabilityMetricsPorts() (bool, []string) {
 	return true, DefaultObservabilityPorts
 }
 
+// GetKedaScalerPort returns the port configured for the KEDA external scaler gRPC server.
+// If the env variable is set, it returns the configured port. Otherwise, it returns 0 (disabled).
+func GetKedaScalerPort() int {
+	if portVal, envSet := os.LookupEnv(KedaScalerPortEnvVariable); envSet && strings.TrimSpace(portVal) != "" {
+		return getOperatorEnvAsInt(KedaScalerPortEnvVariable, "keda external scaler port", DefaultKedaScalerPort)
+	}
+
+	return 0
+}
+
 // GetObservabilityMetricsEndpoints returns if the endpoint is the default one and the configured for the Prometheus metrics.
 func GetObservabilityMetricsEndpoints() (bool, []string) {
 	if observabilityMetricsEndpointEnvVar, envSet := os.LookupEnv(CamelMonitorObservabilityMetrics); envSet && observabilityMetricsEndpointEnvVar != "" {
@@ -251,4 +270,29 @@ func GetCheckVersionUpgrade() string {
 	}
 
 	return ""
+}
+
+// GetOperatorDeploymentName returns the name of the Deployment where the operator is running.
+func GetOperatorDeploymentName() string {
+	deploymentName := defaultDeploymentOperatorName
+	if val, envSet := os.LookupEnv(deploymentNameEnvVariable); envSet {
+		deploymentName = val
+	}
+
+	return deploymentName
+}
+
+// GetOperatorDeployment returns the Deployment where the operator is running.
+func GetOperatorDeployment(ctx context.Context, cli client.Reader, namespace string) (*appsv1.Deployment, error) {
+	operatorDeploy := &appsv1.Deployment{}
+
+	err := cli.Get(ctx, types.NamespacedName{
+		Name:      GetOperatorDeploymentName(),
+		Namespace: namespace,
+	}, operatorDeploy)
+	if err != nil {
+		return nil, err
+	}
+
+	return operatorDeploy, nil
 }

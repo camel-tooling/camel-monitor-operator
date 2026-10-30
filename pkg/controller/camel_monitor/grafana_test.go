@@ -24,6 +24,7 @@ import (
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/internal"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	integreatlyv1beta1 "github.com/grafana/grafana-operator/v5/api/v1beta1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,7 @@ func TestAddGrafanaDashboard_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, gd.Spec.InstanceSelector.MatchLabels, 1)
-	assert.Equal(t, "camel-monitor-operator", gd.Spec.InstanceSelector.MatchLabels["camel.apache.org/grafana"])
+	assert.Equal(t, platform.GetOperatorDeploymentName(), gd.Spec.InstanceSelector.MatchLabels["camel.apache.org/grafana"])
 	assert.Contains(t, gd.Spec.JSON,
 		fmt.Sprintf("sum(rate(camel_exchanges_total{job=\\\"%s/%s\\\", eventType=\\\"route\\\"}[5m]))", target.Namespace, target.Name))
 	require.NotNil(t, target.Status.GetCondition("GrafanaDashboard"))

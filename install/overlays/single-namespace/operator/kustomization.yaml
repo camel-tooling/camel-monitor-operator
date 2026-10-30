@@ -30,3 +30,8 @@ patches:
  - target:
       kind: Deployment
    path: patch-envvars.yaml
+# We must also patch this role to reflect the Deployment name change
+ - target:
+      kind: Role
+      name: camel-monitor-operator-keda
+   path: patch-keda-role.yaml

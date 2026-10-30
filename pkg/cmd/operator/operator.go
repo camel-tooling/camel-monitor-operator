@@ -53,6 +53,7 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/controller"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/controller/keda"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/controller/synthetic"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util"
@@ -201,6 +202,14 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	exitOnError(err, "")
 	exitOnError(controller.AddToManager(ctx, mgr, ctrlClient), "")
 	exitOnError(synthetic.ManageSyntheticCamelMonitors(ctx, ctrlClient, mgr.GetCache()), "Camel App Synthetic manager error")
+
+	kedaScalerPort := platform.GetKedaScalerPort()
+	if kedaScalerPort > 0 {
+		log.Infof("Configuring KEDA external scaler on port %d", kedaScalerPort)
+		int32Port, err := util.IToInt32(kedaScalerPort)
+		exitOnError(err, "Could not convert KEDA scaler port")
+		exitOnError(mgr.Add(keda.NewServiceController(mgr, ctrlClient, *int32Port)), "Could not add KEDA scaler controller to manager")
+	}
 
 	if platform.GetCheckVersionUpgrade() == "true" {
 		log.Infof("The operator is configured to check any new version released on %s repository", defaults.DefaultMavenBaseRepo)
