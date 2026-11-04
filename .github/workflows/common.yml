@@ -20,6 +20,15 @@ name: common
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CAMEL_K_VERSION: 2.11.0
+  # Expected latest upstream versions for the UpgradeAvailable tests (otherwise they are skipped).
+  # The sample apps are deployed at an older version, so the operator must report an upgrade.
+  # Maintainers: bump these when a newer release becomes the latest on Maven Central.
+  #   RUNTIME_QUARKUS_TARGET_UPGRADE_VERSION = latest quarkus-camel-bom (Quarkus platform version)
+  #   CAMEL_SB_TARGET_UPGRADE_VERSION        = latest camel-spring-boot-bom (Camel version)
+  #   CAMEL_MAIN_TARGET_UPGRADE_VERSION      = latest camel-core (Camel version)
+  RUNTIME_QUARKUS_TARGET_UPGRADE_VERSION: "3.40.1"
+  CAMEL_SB_TARGET_UPGRADE_VERSION: "4.23.0"
+  CAMEL_MAIN_TARGET_UPGRADE_VERSION: "4.23.0"
 
 on:
   pull_request:
