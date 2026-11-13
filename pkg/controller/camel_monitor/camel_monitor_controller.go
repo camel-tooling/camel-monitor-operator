@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -94,6 +95,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return builder.ControllerManagedBy(mgr).
 		Named("monitor-controller").
 		For(&v1alpha1.CamelMonitor{}, builder.WithPredicates(UpdateFalsePredicate{})).
+		WithOptions(controller.Options{MaxConcurrentReconciles: platform.GetMaxConcurrentReconciles()}).
 		Complete(r)
 }
 

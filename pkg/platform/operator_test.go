@@ -70,6 +70,80 @@ func TestGetOperatorEnvAsInt(t *testing.T) {
 		})
 	}
 }
+func TestGetOperatorEnvAsFloat32(t *testing.T) {
+	tests := []struct {
+		name         string
+		envValue     string
+		expected     float32
+		defaultValue float32
+	}{
+		{"valid float", "42.5", 42.5, 10},
+		{"valid int as float", "7", 7, 10},
+		{"invalid float", "abc", 10, 10},
+		{"empty value", "", 10, 10},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TEST_FLOAT_ENV", tt.envValue)
+
+			val := getOperatorEnvAsFloat32("TEST_FLOAT_ENV", "test float env", tt.defaultValue)
+			assert.Equal(t, tt.expected, val)
+		})
+	}
+}
+
+func TestGetClientQPS(t *testing.T) {
+	t.Run("env value", func(t *testing.T) {
+		t.Setenv(clientQPSEnvVariable, "35.5")
+		assert.Equal(t, float32(35.5), GetClientQPS())
+	})
+
+	t.Run("default", func(t *testing.T) {
+		t.Setenv(clientQPSEnvVariable, "")
+		assert.Equal(t, defaultClientQPS, GetClientQPS())
+	})
+
+	t.Run("invalid falls back to default", func(t *testing.T) {
+		t.Setenv(clientQPSEnvVariable, "abc")
+		assert.Equal(t, defaultClientQPS, GetClientQPS())
+	})
+}
+
+func TestGetClientBurst(t *testing.T) {
+	t.Run("env value", func(t *testing.T) {
+		t.Setenv(clientBurstEnvVariable, "300")
+		assert.Equal(t, 300, GetClientBurst())
+	})
+
+	t.Run("default", func(t *testing.T) {
+		t.Setenv(clientBurstEnvVariable, "")
+		assert.Equal(t, defaultClientBurst, GetClientBurst())
+	})
+
+	t.Run("invalid falls back to default", func(t *testing.T) {
+		t.Setenv(clientBurstEnvVariable, "abc")
+		assert.Equal(t, defaultClientBurst, GetClientBurst())
+	})
+}
+
+func TestGetMaxConcurrentReconciles(t *testing.T) {
+	t.Run("env value", func(t *testing.T) {
+		t.Setenv(maxConcurrentReconcilesEnvVariable, "5")
+		assert.Equal(t, 5, GetMaxConcurrentReconciles())
+	})
+
+	t.Run("default", func(t *testing.T) {
+		t.Setenv(maxConcurrentReconcilesEnvVariable, "")
+		assert.Equal(t, defaultMaxConcurrentReconciles, GetMaxConcurrentReconciles())
+	})
+
+	t.Run("invalid falls back to default", func(t *testing.T) {
+		t.Setenv(maxConcurrentReconcilesEnvVariable, "abc")
+		assert.Equal(t, defaultMaxConcurrentReconciles, GetMaxConcurrentReconciles())
+	})
+}
 
 func TestGetPollingInterval(t *testing.T) {
 	t.Setenv(CamelMonitorPollIntervalSeconds, "30")
