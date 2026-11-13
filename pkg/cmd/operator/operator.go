@@ -129,6 +129,10 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 
 	cfg, err := config.GetConfig()
 	exitOnError(err, "cannot get client config")
+	// Increase maximum burst and QPS used by client-side throttling,
+	// to prevent API requests from being throttled during startup or high reconciliation loads.
+	cfg.QPS = platform.GetClientQPS()
+	cfg.Burst = platform.GetClientBurst()
 
 	operatorNamespace := platform.GetOperatorNamespace()
 	if operatorNamespace == "" {

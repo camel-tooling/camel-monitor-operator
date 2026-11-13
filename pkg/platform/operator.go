@@ -40,21 +40,27 @@ const (
 	GrafanaDatasourceEnvVariable          = "GRAFANA_DS"
 	maxIdleEnvVariable                    = "MAX_IDLE_SEC"
 	checkVersionUpgradeEnvVariable        = "CHECK_VERSION_UPGRADE"
+	clientQPSEnvVariable                  = "CLIENT_QPS"
+	clientBurstEnvVariable                = "CLIENT_BURST"
+	maxConcurrentReconcilesEnvVariable    = "MAX_CONCURRENT_RECONCILES"
 
 	CamelMonitorLabelSelector = "LABEL_SELECTOR"
 
-	CamelMonitorPollIntervalSeconds           = "POLL_INTERVAL_SECONDS"
-	DefaultPollingIntervalSeconds             = 60
-	SLIExchangeErrorPercentage                = "SLI_ERR_PERCENTAGE"
-	defaultSLIExchangeErrorPercentage         = 5
-	SLIExchangeWarningPercentage              = "SLI_WARN_PERCENTAGE"
-	defaultSLIExchangeWarningPercentage       = 10
-	CamelMonitorObservabilityHealthPorts      = "OBSERVABILITY_HEALTH_PORTS"
-	CamelMonitorObservabilityMetricsPorts     = "OBSERVABILITY_METRICS_PORTS"
-	CamelMonitorObservabilityMetrics          = "OBSERVABILITY_METRICS_ENDPOINTS"
-	CamelMonitorObservabilityHealth           = "OBSERVABILITY_HEALTH_ENDPOINTS"
-	defaultGrafanaDatasource                  = "prometheus"
-	defaultMaxIdleSec                     int = 60
+	CamelMonitorPollIntervalSeconds               = "POLL_INTERVAL_SECONDS"
+	DefaultPollingIntervalSeconds                 = 60
+	SLIExchangeErrorPercentage                    = "SLI_ERR_PERCENTAGE"
+	defaultSLIExchangeErrorPercentage             = 5
+	SLIExchangeWarningPercentage                  = "SLI_WARN_PERCENTAGE"
+	defaultSLIExchangeWarningPercentage           = 10
+	CamelMonitorObservabilityHealthPorts          = "OBSERVABILITY_HEALTH_PORTS"
+	CamelMonitorObservabilityMetricsPorts         = "OBSERVABILITY_METRICS_PORTS"
+	CamelMonitorObservabilityMetrics              = "OBSERVABILITY_METRICS_ENDPOINTS"
+	CamelMonitorObservabilityHealth               = "OBSERVABILITY_HEALTH_ENDPOINTS"
+	defaultGrafanaDatasource                      = "prometheus"
+	defaultMaxIdleSec                     int     = 60
+	defaultClientQPS                      float32 = 20
+	defaultClientBurst                    int     = 200
+	defaultMaxConcurrentReconciles        int     = 1
 
 	OperatorLockName = "camel-monitor-lock"
 )
@@ -186,6 +192,36 @@ func getOperatorEnvAsInt(envVar, envVarDescription string, defaultValue int) int
 	}
 
 	return defaultValue
+}
+
+// getOperatorEnvAsFloat32 returns a generic operator environment variable as a float32. It fallbacks to default value if the env var is missing.
+func getOperatorEnvAsFloat32(envVar, envVarDescription string, defaultValue float32) float32 {
+	if envVarVal, envSet := os.LookupEnv(envVar); envSet && envVarVal != "" {
+		v, err := strconv.ParseFloat(envVarVal, 32)
+		if err == nil {
+			return float32(v)
+		} else {
+			log.Errorf(err, "could not properly parse Operator env var %s, "+
+				"fallback to default value %f", envVarDescription, defaultValue)
+		}
+	}
+
+	return defaultValue
+}
+
+// GetClientQPS returns the QPS used by the operator Kubernetes client-side throttling. It fallbacks to default value.
+func GetClientQPS() float32 {
+	return getOperatorEnvAsFloat32(clientQPSEnvVariable, "client QPS", defaultClientQPS)
+}
+
+// GetClientBurst returns the burst used by the operator Kubernetes client-side throttling. It fallbacks to default value.
+func GetClientBurst() int {
+	return getOperatorEnvAsInt(clientBurstEnvVariable, "client burst", defaultClientBurst)
+}
+
+// GetMaxConcurrentReconciles returns the max number of concurrent reconciles of the CamelMonitor controller. It fallbacks to default value.
+func GetMaxConcurrentReconciles() int {
+	return getOperatorEnvAsInt(maxConcurrentReconcilesEnvVariable, "max concurrent reconciles", defaultMaxConcurrentReconciles)
 }
 
 // getPollingIntervalSeconds returns the polling interval (in seconds) for the operator. It fallbacks to default value.
