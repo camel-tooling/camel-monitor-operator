@@ -85,6 +85,14 @@ func TestNonManagedCamelDeploymentStatic(t *testing.T) {
 	phase = app.GetAppPhase(context.TODO(), nil)
 	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, phase)
 
+	// Test GetAppPhase when spec replicas = 0 but status replicas > 0 (scale-down in progress)
+	deploy.Spec.Replicas = ptr.To(int32(0))
+	deploy.Status.Replicas = 2
+	deploy.Status.AvailableReplicas = 0
+	phase = app.GetAppPhase(context.TODO(), nil)
+	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, phase)
+	deploy.Spec.Replicas = ptr.To(int32(3))
+
 	// Test CamelMonitor static fields
 	deploy.Status.Replicas = 2
 	deploy.Status.AvailableReplicas = 2
