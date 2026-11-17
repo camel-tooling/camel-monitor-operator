@@ -574,7 +574,7 @@ func parseHealthStatus(reader io.Reader) (string, error) {
 }
 
 func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) {
-	if len(pods) == 0 {
+	if targetApp.Status.Phase == v1alpha1.CamelMonitorPhasePaused || len(pods) == 0 {
 		targetApp.Status.AddCondition(metav1.Condition{
 			Type:               "Monitored",
 			Status:             metav1.ConditionUnknown,
@@ -594,22 +594,18 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	monitoredMessage := "Some Pod is not ready. See specific Pods status messages"
+	monitoredReason := "MonitoringComplete"
 	monitoredCondition := metav1.ConditionFalse
 
 	if allPodsReady(pods) {
-		monitoredCondition = metav1.ConditionTrue
-
-		monitoredMessage = "Success"
-		if app.Status.Replicas != nil && len(pods) != int(*app.Status.Replicas) {
-			monitoredMessage = fmt.Sprintf("%d out of %d pods available", len(pods), int(*app.Status.Replicas))
-		}
+		monitoredCondition, monitoredReason, monitoredMessage = getReadyPodsMonitoringCondition(app, pods)
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
 		Type:               "Monitored",
 		Status:             monitoredCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
-		Reason:             "MonitoringComplete",
+		Reason:             monitoredReason,
 		Message:            monitoredMessage,
 	})
 
@@ -619,6 +615,8 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	if allPodsUp(pods) {
 		healthCondition = metav1.ConditionTrue
 		healthMessage = "All Pods are reported as healthy"
+	} else if allPodsReady(pods) {
+		healthMessage = "Could not verify health status. See specific Pods status messages"
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
@@ -712,4 +710,27 @@ func allPodsUp(pods []v1alpha1.PodInfo) bool {
 	}
 
 	return true
+}
+
+func getReadyPodsMonitoringCondition(app *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) (metav1.ConditionStatus, string, string) {
+	if anyPodScrapeFailed(pods) {
+		return metav1.ConditionFalse, "MonitoringError", "Could not scrape health or metrics endpoints. See specific Pods status messages"
+	}
+
+	monitoredMessage := "Success"
+	if app.Status.Replicas != nil && len(pods) != int(*app.Status.Replicas) {
+		monitoredMessage = fmt.Sprintf("%d out of %d pods available", len(pods), int(*app.Status.Replicas))
+	}
+
+	return metav1.ConditionTrue, "MonitoringComplete", monitoredMessage
+}
+
+func anyPodScrapeFailed(pods []v1alpha1.PodInfo) bool {
+	for _, pod := range pods {
+		if pod.Reason != "" {
+			return true
+		}
+	}
+
+	return false
 }

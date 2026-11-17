@@ -295,6 +295,146 @@ func TestMonitorActionDeploymentPodsRunning(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, healthy.Status)
 }
 
+func TestMonitorActionDeploymentNoMetrics(t *testing.T) {
+	app := &v1alpha1.CamelMonitor{}
+	app.Name = "test-app"
+	app.Namespace = "default"
+	app.Annotations = map[string]string{
+		v1alpha1.MonitorImportedKindLabel: "Deployment",
+		v1alpha1.MonitorImportedNameLabel: "my-test-deploy",
+	}
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-test-deploy",
+			Namespace: "default",
+			Annotations: map[string]string{
+				// Point to an invalid port where no health or metrics server is running
+				v1alpha1.MonitorObservabilityServicesHealthPorts:  "9999",
+				v1alpha1.MonitorObservabilityServicesMetricsPorts: "9999",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{Image: "my-camel-image"},
+				},
+			}},
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "my-camel-app"}},
+			Replicas: ptr.To(int32(1)),
+		},
+		Status: appsv1.DeploymentStatus{
+			Replicas:          1,
+			AvailableReplicas: 1,
+		},
+	}
+
+	pod1 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-pod-1", Namespace: "default", Labels: map[string]string{"app": "my-camel-app"}},
+		Status: v1.PodStatus{
+			Conditions: []v1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+			Phase:      corev1.PodRunning,
+			PodIP:      "127.0.0.1",
+		},
+	}
+
+	fakeClient, err := internal.NewFakeClient(app, deployment, pod1)
+	require.NoError(t, err)
+
+	action := &monitorAction{}
+	action.InjectClient(fakeClient)
+
+	target, err := action.Handle(context.TODO(), app)
+
+	require.NoError(t, err)
+	require.NotNil(t, target)
+	assert.Equal(t, "my-camel-image", target.Status.Image)
+	assert.Equal(t, ptr.To(int32(1)), target.Status.Replicas)
+	assert.Equal(t, v1alpha1.CamelMonitorPhaseRunning, target.Status.Phase)
+	assert.Len(t, target.Status.Pods, 1)
+
+	monitored := target.Status.GetCondition("Monitored")
+	assert.NotNil(t, monitored)
+	assert.Equal(t, metav1.ConditionFalse, monitored.Status)
+	assert.Equal(t, "MonitoringError", monitored.Reason)
+	assert.Equal(t, "Could not scrape health or metrics endpoints. See specific Pods status messages", monitored.Message)
+
+	healthy := target.Status.GetCondition("Healthy")
+	assert.NotNil(t, healthy)
+	assert.Equal(t, metav1.ConditionFalse, healthy.Status)
+	assert.Equal(t, "Could not verify health status. See specific Pods status messages", healthy.Message)
+}
+
+func TestMonitorActionDeploymentNoMetricsScaledTo0(t *testing.T) {
+	app := &v1alpha1.CamelMonitor{}
+	app.Name = "test-app"
+	app.Namespace = "default"
+	app.Annotations = map[string]string{
+		v1alpha1.MonitorImportedKindLabel: "Deployment",
+		v1alpha1.MonitorImportedNameLabel: "my-test-deploy",
+	}
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "my-test-deploy",
+			Namespace: "default",
+			Annotations: map[string]string{
+				v1alpha1.MonitorObservabilityServicesHealthPorts:  "9999",
+				v1alpha1.MonitorObservabilityServicesMetricsPorts: "9999",
+			},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: v1.PodTemplateSpec{Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					{Image: "my-camel-image"},
+				},
+			}},
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "my-camel-app"}},
+			// Scaled to 0 in spec
+			Replicas: ptr.To(int32(0)),
+		},
+		// Status replicas still showing 1 (scale-down lag)
+		Status: appsv1.DeploymentStatus{
+			Replicas:          1,
+			AvailableReplicas: 0,
+		},
+	}
+
+	pod1 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-pod-1", Namespace: "default", Labels: map[string]string{"app": "my-camel-app"}},
+		Status: v1.PodStatus{
+			Conditions: []v1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+			Phase:      corev1.PodRunning,
+			PodIP:      "127.0.0.1",
+		},
+	}
+
+	fakeClient, err := internal.NewFakeClient(app, deployment, pod1)
+	require.NoError(t, err)
+
+	action := &monitorAction{}
+	action.InjectClient(fakeClient)
+
+	target, err := action.Handle(context.TODO(), app)
+
+	require.NoError(t, err)
+	require.NotNil(t, target)
+	assert.Equal(t, "my-camel-image", target.Status.Image)
+	assert.Equal(t, ptr.To(int32(0)), target.Status.Replicas)
+	// Must be paused even when status replicas is not yet 0 and pod has no metrics
+	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
+
+	monitored := target.Status.GetCondition("Monitored")
+	assert.NotNil(t, monitored)
+	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
+	assert.Equal(t, "No active Pod available", monitored.Message)
+
+	healthy := target.Status.GetCondition("Healthy")
+	assert.NotNil(t, healthy)
+	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
+	assert.Equal(t, "No active Pod available", healthy.Message)
+}
+
 func mockServer() *httptest.Server {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
