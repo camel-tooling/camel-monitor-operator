@@ -33,12 +33,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewMonitorAction returns an action that monitors the App.
-func NewMonitorAction(hasPrometheusCRDs, hasGrafanaCRDs bool) Action {
+func NewMonitorAction(clientset k8s.Interface, hasPrometheusCRDs, hasGrafanaCRDs bool) Action {
 	return &monitorAction{
+		clientset:         clientset,
 		hasPrometheusCRDs: hasPrometheusCRDs,
 		hasGrafanaCRDs:    hasGrafanaCRDs,
 	}
@@ -47,6 +49,8 @@ func NewMonitorAction(hasPrometheusCRDs, hasGrafanaCRDs bool) Action {
 type monitorAction struct {
 	baseAction
 
+	// Typed clientset, required to read the Pod logs (not supported by the controller-runtime client)
+	clientset k8s.Interface
 	// We cache the discovery call for performance reasons
 	hasPrometheusCRDs bool
 	hasGrafanaCRDs    bool
@@ -94,7 +98,7 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	targetApp.Status.Phase = appPhase
 	targetApp.Status.Image = deployImage
 
-	pods, err := nonManagedApp.GetPods(ctx, action.client, obsConf)
+	pods, err := nonManagedApp.GetPods(ctx, action.client, action.clientset, obsConf)
 	if err != nil {
 		return targetApp, err
 	}
@@ -280,7 +284,8 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 	})
 }
 
-func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval *time.Duration, sliErrPerc, sliWarnPerc int) *v1alpha1.SLIExchangeSuccessRate {
+func getSLIExchangeSuccessRate(
+	app, target v1alpha1.RuntimeInfo, pollingInteval *time.Duration, sliErrPerc, sliWarnPerc int) *v1alpha1.SLIExchangeSuccessRate {
 	var failureRate float64
 
 	sliExchangeSuccessRate := v1alpha1.SLIExchangeSuccessRate{

@@ -21,14 +21,17 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	v1alpha1 "github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util/kubernetes"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
 )
 
 // nonManagedCamelCronjob represents a cron Camel application built and deployed outside the operator lifecycle.
@@ -81,11 +84,20 @@ func (app *nonManagedCamelCronjob) GetAppImage() string {
 }
 
 // GetPods returns the pods backing the Camel application.
-func (app *nonManagedCamelCronjob) GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error) {
+func (app *nonManagedCamelCronjob) GetPods(
+	ctx context.Context, c client.Client, clientset k8s.Interface, conf appObservabilityConf,
+) ([]v1alpha1.PodInfo, error) {
 	// In the CronJob case we don't want to inspect the Pod as we are not sure we have the Pod live when
-	// the monitoring happens.
-	return getPods(*app.httpClient, ctx, c, app.cron.GetNamespace(),
-		app.GetMatchLabelsSelector(), conf, false, nil)
+	// the monitoring happens. We are scraping last Pod logs instead.
+	var cpuLimitString string
+
+	cpuCoreLimit := kubernetes.GetResourcesLimitInMillis(app.GetResourcesLimits(), corev1.ResourceCPU)
+	if cpuCoreLimit > 0 {
+		cpuLimitString = strconv.FormatInt(int64(cpuCoreLimit), 10)
+	}
+
+	return getPods(*app.httpClient, ctx, c, clientset, app.cron.GetNamespace(),
+		app.GetMatchLabelsSelector(), conf, false, &cpuLimitString)
 }
 
 // GetAnnotations returns the backing deployment object annotations.

@@ -30,6 +30,7 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/monitoring"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -54,10 +55,15 @@ func Add(ctx context.Context, mgr manager.Manager, c client.Client) error {
 		return err
 	}
 
-	return add(mgr, newReconciler(mgr, c, hasPrometheusAPI, hasGrafanaDashboardAPI))
+	clientset, err := k8s.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		return err
+	}
+
+	return add(mgr, newReconciler(mgr, c, clientset, hasPrometheusAPI, hasGrafanaDashboardAPI))
 }
 
-func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasGrafanaCRDs bool) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, c client.Client, clientset k8s.Interface, hasPrometheusCRDs, hasGrafanaCRDs bool) reconcile.Reconciler {
 	if hasPrometheusCRDs {
 		log.Log.WithName("reconciler").Info("Detected the presence of Prometheus PodMonitor custom resource. If enabled, the operator" +
 			" will create Prometheus resources automatically!")
@@ -77,6 +83,7 @@ func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasG
 	return monitoring.NewInstrumentedReconciler(
 		&reconcileApp{
 			client:            c,
+			clientset:         clientset,
 			reader:            mgr.GetAPIReader(),
 			scheme:            mgr.GetScheme(),
 			recorder:          mgr.GetEventRecorder("camel-monitor-controller"),
@@ -103,10 +110,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 type reconcileApp struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the API server
-	client   client.Client
-	reader   ctrl.Reader
-	scheme   *runtime.Scheme
-	recorder events.EventRecorder
+	client    client.Client
+	clientset k8s.Interface
+	reader    ctrl.Reader
+	scheme    *runtime.Scheme
+	recorder  events.EventRecorder
 	// We cache the discovery call for performance reasons
 	hasPrometheusCRDs bool
 	hasGrafanaCRDs    bool
@@ -128,7 +136,7 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 
 	if len(actions) == 0 {
 		actions = []Action{
-			NewMonitorAction(r.hasPrometheusCRDs, r.hasGrafanaCRDs),
+			NewMonitorAction(r.clientset, r.hasPrometheusCRDs, r.hasGrafanaCRDs),
 		}
 		// when we initialize, we create the PrometheusRule alert as well.
 		if r.hasPrometheusCRDs && platform.GetCreatePrometheusRuleAlerts() == "true" {

@@ -33,6 +33,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	k8s "k8s.io/client-go/kubernetes"
 	clientgocache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
@@ -189,7 +190,7 @@ type NonManagedCamelMonitorlicationAdapter interface {
 	// GetReplicas returns the number of desired replicas for the backing Camel application.
 	GetReplicas() *int32
 	// GetPods returns the actual Pods backing the Camel application.
-	GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error)
+	GetPods(ctx context.Context, c client.Client, clientset k8s.Interface, conf appObservabilityConf) ([]v1alpha1.PodInfo, error)
 	// GetAnnotations returns the backing deployment object annotations.
 	GetAnnotations() map[string]string
 	// GetMatchLabelsSelector returns the labels selector used to select Pods belonging to the backing application.

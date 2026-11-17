@@ -34,6 +34,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 )
 
@@ -200,7 +201,8 @@ func TestMonitorActionDeploymentNonActivePods(t *testing.T) {
 	fakeClient, err := internal.NewFakeClient(app, deployment, pod1, pod2, pod3)
 	require.NoError(t, err)
 
-	action := &monitorAction{}
+	// The Failed Pod triggers a log inspection, which requires a clientset.
+	action := &monitorAction{clientset: fake.NewClientset()}
 	action.InjectClient(fakeClient)
 
 	target, err := action.Handle(context.TODO(), app)
