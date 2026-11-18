@@ -78,6 +78,55 @@ func TestVerifyDeploymentLabelInLabelOut(t *testing.T) {
 	})
 }
 
+func TestVerifyDeploymentLabelValueChange(t *testing.T) {
+	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
+		t.Run("simple Deployment", func(t *testing.T) {
+			ExpectExecSucceed(t, g,
+				exec.Command(
+					"kubectl",
+					strings.Split("create deployment camel-app --image="+CamelAppQuarkus()+" -n "+ns, " ")...,
+				),
+			)
+			g.Eventually(PodStatusPhase(t, ctx, ns, "app=camel-app"), TestTimeoutMedium).Should(Equal(corev1.PodRunning))
+			// Label in: the operator should discover
+			ExpectExecSucceed(t, g,
+				exec.Command(
+					"kubectl",
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample -n "+ns, " ")...,
+				),
+			)
+			g.Eventually(CamelMonitor(t, ctx, ns, "camel-sample")).Should(Not(BeNil()))
+			// Change the label value: the CR named after the old value is replaced by one named after the new value
+			ExpectExecSucceed(t, g,
+				exec.Command(
+					"kubectl",
+					strings.Split("label deployment camel-app camel.apache.org/monitor=camel-sample-renamed --overwrite -n "+ns, " ")...,
+				),
+			)
+			g.Eventually(CamelMonitor(t, ctx, ns, "camel-sample-renamed")).Should(Not(BeNil()))
+			g.Eventually(CamelMonitor(t, ctx, ns, "camel-sample")).Should(BeNil())
+			g.Eventually(CamelMonitors(t, ctx, ns)).Should(HaveLen(1))
+			g.Eventually(
+				CamelMonitorStatus(t, ctx, ns, "camel-sample-renamed"),
+				TestTimeoutMedium,
+			).Should(
+				MatchFields(IgnoreExtras, Fields{
+					"Phase":    Equal(v1alpha1.CamelMonitorPhaseRunning),
+					"Replicas": PointTo(Equal(int32(1))),
+				}),
+			)
+			// Label out: the operator has to remove the CR
+			ExpectExecSucceed(t, g,
+				exec.Command(
+					"kubectl",
+					strings.Split("label deployment camel-app camel.apache.org/monitor- -n "+ns, " ")...,
+				),
+			)
+			g.Eventually(CamelMonitors(t, ctx, ns)).Should(BeEmpty())
+		})
+	})
+}
+
 func testVerifyDeployment(t *testing.T, image string) {
 	WithNewTestNamespace(t, func(ctx context.Context, g *WithT, ns string) {
 		t.Run("simple Deployment", func(t *testing.T) {
