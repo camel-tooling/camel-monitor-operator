@@ -335,6 +335,7 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 
 	require.Len(t, status.Conditions, 1)
 	assert.Equal(t, metav1.ConditionTrue, status.Conditions[0].Status)
+	assert.Equal(t, "New Camel Quarkus runtime version 3.38.1 is available", status.Conditions[0].Message)
 }
 
 func TestCheckVersionUpgradeSpringBootIsTrue(t *testing.T) {

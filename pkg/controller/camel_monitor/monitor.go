@@ -265,10 +265,6 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 		statusCondition = metav1.ConditionTrue
 		reason = "NewVersionAvailable"
 		message = "New Camel " + runtimeInfo.RuntimeProvider + " runtime version " + mavenMeta.Versioning.Release + " is available"
-
-		if runtimeInfo.RuntimeProvider == "Quarkus" {
-			message += " (Camel " + runtimeInfo.CamelVersion + ")"
-		}
 	}
 
 	targetAppStatus.AddCondition(metav1.Condition{
