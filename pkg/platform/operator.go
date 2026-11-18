@@ -49,9 +49,9 @@ const (
 	CamelMonitorPollIntervalSeconds               = "POLL_INTERVAL_SECONDS"
 	DefaultPollingIntervalSeconds                 = 60
 	SLIExchangeErrorPercentage                    = "SLI_ERR_PERCENTAGE"
-	defaultSLIExchangeErrorPercentage             = 5
+	defaultSLIExchangeErrorPercentage             = 10
 	SLIExchangeWarningPercentage                  = "SLI_WARN_PERCENTAGE"
-	defaultSLIExchangeWarningPercentage           = 10
+	defaultSLIExchangeWarningPercentage           = 5
 	CamelMonitorObservabilityHealthPorts          = "OBSERVABILITY_HEALTH_PORTS"
 	CamelMonitorObservabilityMetricsPorts         = "OBSERVABILITY_METRICS_PORTS"
 	CamelMonitorObservabilityMetrics              = "OBSERVABILITY_METRICS_ENDPOINTS"

@@ -43,8 +43,10 @@ const (
 	// MonitorObservabilityServicesHealthEndpoint is used to instruct an application to use a specific endpoints (comma separated) for health scraping.
 	MonitorObservabilityServicesHealthEndpoint = camelPrefix + "/health-endpoints"
 	// MonitorSLIExchangeErrorPercentageAnnotation is used to instruct a given application error percentage SLI Exchange.
+	// The status is Error when the failure rate is above this value.
 	MonitorSLIExchangeErrorPercentageAnnotation = camelPrefix + "/sli-exchange-error-percentage"
 	// MonitorSLIExchangeWarningPercentageAnnotation is used to instruct a given application warning percentage SLI Exchange.
+	// The status is Warning when the failure rate is above this value (and not above the error percentage).
 	MonitorSLIExchangeWarningPercentageAnnotation = camelPrefix + "/sli-exchange-warning-percentage"
 )
 

@@ -47,13 +47,22 @@ func TestGetSLIExchangeSuccessRate(t *testing.T) {
 
 	interval := 30 * time.Second
 
-	result := getSLIExchangeSuccessRate(app, target, &interval, 5, 10)
+	// 10% failure rate: warning when error threshold is 20 and warning threshold is 5
+	result := getSLIExchangeSuccessRate(app, target, &interval, 20, 5)
 
 	assert.NotNil(t, result)
 	assert.Equal(t, 100, result.SamplingIntervalTotal)
 	assert.Equal(t, 10, result.SamplingIntervalFailed)
 	assert.Equal(t, "90.00", result.SuccessPercentage)
 	assert.Equal(t, v1alpha1.SLIExchangeStatusWarning, result.Status)
+
+	// 10% failure rate: error when error threshold is 5
+	result = getSLIExchangeSuccessRate(app, target, &interval, 5, 1)
+	assert.Equal(t, v1alpha1.SLIExchangeStatusError, result.Status)
+
+	// 10% failure rate: success when both thresholds are above it
+	result = getSLIExchangeSuccessRate(app, target, &interval, 20, 10)
+	assert.Equal(t, v1alpha1.SLIExchangeStatusSuccess, result.Status)
 }
 
 func TestGetInfo(t *testing.T) {
