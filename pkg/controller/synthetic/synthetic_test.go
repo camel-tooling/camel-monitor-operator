@@ -251,6 +251,47 @@ func TestSyntheticOnAddCreateAppOnDelete(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, "camelmonitors.camel.apache.org \"my-app\" not found", err.Error())
 }
+func TestSyntheticOnUpdateLabelChanged(t *testing.T) {
+	newDeploy := func(label string) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-deploy",
+				Namespace: "default",
+				UID:       "1234",
+				Labels:    map[string]string{v1alpha1.MonitorLabel: label},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: ptr.To(int32(1)),
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "main", Image: "my-image:v1"}},
+					},
+				},
+			},
+		}
+	}
+	oldDeploy := newDeploy("old-app")
+	newerDeploy := newDeploy("new-app")
+
+	fakeClient, err := internal.NewFakeClient(oldDeploy)
+	require.NoError(t, err)
+	onAdd(context.TODO(), fakeClient, oldDeploy)
+	_, err = getSyntheticCamelMonitor(context.TODO(), fakeClient, "default", "old-app")
+	require.NoError(t, err)
+
+	// Same label value: nothing changes
+	onUpdate(context.TODO(), fakeClient, oldDeploy, oldDeploy)
+	_, err = getSyntheticCamelMonitor(context.TODO(), fakeClient, "default", "old-app")
+	require.NoError(t, err)
+
+	// Label value changed: old monitor removed, new one created
+	onUpdate(context.TODO(), fakeClient, oldDeploy, newerDeploy)
+	_, err = getSyntheticCamelMonitor(context.TODO(), fakeClient, "default", "old-app")
+	require.Error(t, err)
+	created, err := getSyntheticCamelMonitor(context.TODO(), fakeClient, "default", "new-app")
+	require.NoError(t, err)
+	assert.Equal(t, "my-deploy", created.GetAnnotations()[v1alpha1.MonitorImportedNameLabel])
+}
 
 func TestSyntheticOnAddDuplicatedCamelMonitor(t *testing.T) {
 	deploy := &appsv1.Deployment{

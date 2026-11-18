@@ -63,6 +63,23 @@ func ManageSyntheticCamelMonitors(ctx context.Context, c client.Client, cache ca
 
 				onAdd(ctx, c, ctrlObj)
 			},
+			UpdateFunc: func(oldObj, newObj any) {
+				oldCtrlObj, ok := oldObj.(ctrl.Object)
+				if !ok {
+					log.Error(fmt.Errorf("type assertion failed: %v", oldObj), "Failed to retrieve old Object on update event")
+
+					return
+				}
+
+				newCtrlObj, ok := newObj.(ctrl.Object)
+				if !ok {
+					log.Error(fmt.Errorf("type assertion failed: %v", newObj), "Failed to retrieve new Object on update event")
+
+					return
+				}
+
+				onUpdate(ctx, c, oldCtrlObj, newCtrlObj)
+			},
 			DeleteFunc: func(obj any) {
 				ctrlObj, ok := obj.(ctrl.Object)
 				if !ok {
@@ -98,6 +115,23 @@ func onAdd(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
 	default:
 		log.Infof("Resource %s already has a CamelMonitor associated.", ctrlObj.GetName())
 	}
+}
+
+// onUpdate handles the drift of the monitor label value: the Camel Monitor associated to the old value is removed
+// and a new one is created for the new value.
+func onUpdate(ctx context.Context, c client.Client, oldObj, newObj ctrl.Object) {
+	selector := platform.GetMonitorLabelSelector()
+	oldName := oldObj.GetLabels()[selector]
+	newName := newObj.GetLabels()[selector]
+
+	if oldName == newName {
+		return
+	}
+
+	log.Infof("Detected a change of %s label value on resource %s in namespace %s: %s -> %s",
+		selector, newObj.GetName(), newObj.GetNamespace(), oldName, newName)
+	onDelete(ctx, c, oldObj)
+	onAdd(ctx, c, newObj)
 }
 
 func createMonitor(ctx context.Context, c client.Client, ctrlObj ctrl.Object, appName, suffix string) {
