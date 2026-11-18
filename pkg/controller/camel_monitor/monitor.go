@@ -305,9 +305,9 @@ func getSLIExchangeSuccessRate(app, target v1alpha1.RuntimeInfo, pollingInteval 
 	}
 
 	switch {
-	case failureRate > float64(sliWarnPerc):
-		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusError
 	case failureRate > float64(sliErrPerc):
+		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusError
+	case failureRate > float64(sliWarnPerc):
 		sliExchangeSuccessRate.Status = v1alpha1.SLIExchangeStatusWarning
 	case totalLastInterval > 0:
 		// Do not mark as successful until at least one exchange has occurred.
