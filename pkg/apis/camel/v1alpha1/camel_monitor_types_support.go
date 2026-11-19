@@ -23,6 +23,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Condition types set in the CamelMonitor status.
+// NOTE: the kubebuilder printcolumn markers in camel_monitor_types.go cannot reference these constants,
+// so they must be kept in sync manually if a value is ever changed.
+const (
+	// ConditionTypeMonitored reports whether the application is being monitored. It is rewritten on every
+	// monitoring cycle, so its LastTransitionTime is also used as the "last time the application was polled" marker.
+	ConditionTypeMonitored = "Monitored"
+	// ConditionTypeHealthy reports the health status of the application Pods.
+	ConditionTypeHealthy = "Healthy"
+	// ConditionTypeMemoryPressure reports whether any Pod has JVM memory pressure.
+	ConditionTypeMemoryPressure = "MemoryPressure"
+	// ConditionTypeCPUPressure reports whether any Pod has CPU pressure.
+	ConditionTypeCPUPressure = "CPUPressure"
+	// ConditionTypeUpgradeAvailable reports whether a newer runtime version is available.
+	ConditionTypeUpgradeAvailable = "UpgradeAvailable"
+	// ConditionTypeCronJobExecution reports the scheduling information of a CronJob application.
+	ConditionTypeCronJobExecution = "CronJobExecution"
+	// ConditionTypePrometheusPodMonitor reports the outcome of the Prometheus PodMonitor creation.
+	ConditionTypePrometheusPodMonitor = "PrometheusPodMonitor"
+	// ConditionTypeGrafanaDashboard reports the outcome of the Grafana dashboard creation.
+	ConditionTypeGrafanaDashboard = "GrafanaDashboard"
+)
+
 const (
 	// camelPrefix is used to identify Camel prefix labels/annotations.
 	camelPrefix = "camel.apache.org"

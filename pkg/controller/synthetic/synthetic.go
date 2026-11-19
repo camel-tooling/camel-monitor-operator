@@ -100,7 +100,7 @@ func ManageSyntheticCamelMonitors(ctx context.Context, c client.Client, cache ca
 }
 
 func onAdd(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
-	log.Infof("Detected a new resource named %s in namespace %s", ctrlObj.GetName(), ctrlObj.GetNamespace())
+	log.Debugf("Detected a new resource named %s in namespace %s", ctrlObj.GetName(), ctrlObj.GetNamespace())
 	appName := ctrlObj.GetLabels()[platform.GetMonitorLabelSelector()]
 
 	existingApp, err := getSyntheticCamelMonitor(ctx, c, ctrlObj.GetNamespace(), appName)

@@ -141,7 +141,7 @@ func TestSetMonitoringCondition_NoPods(t *testing.T) {
 	adapter.SetMonitoringCondition(nil, target, nil)
 
 	require.Len(t, target.Status.Conditions, 1)
-	require.Equal(t, "Monitored", target.Status.Conditions[0].Type)
+	require.Equal(t, v1alpha1.ConditionTypeMonitored, target.Status.Conditions[0].Type)
 	require.Equal(t, metav1.ConditionFalse, target.Status.Conditions[0].Status)
 }
 
@@ -170,7 +170,7 @@ func TestSetMonitoringCondition_AllSucceeded(t *testing.T) {
 
 	var healthy *metav1.Condition
 	for i := range target.Status.Conditions {
-		if target.Status.Conditions[i].Type == "Healthy" {
+		if target.Status.Conditions[i].Type == v1alpha1.ConditionTypeHealthy {
 			healthy = &target.Status.Conditions[i]
 		}
 	}

@@ -111,7 +111,7 @@ func addCamelMonitorGrafanaCondition(target *v1alpha1.CamelMonitor, err error) {
 	}
 
 	target.Status.AddCondition(metav1.Condition{
-		Type:               "GrafanaDashboard",
+		Type:               v1alpha1.ConditionTypeGrafanaDashboard,
 		Status:             statusCond,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "GrafanaDashboardAdded",

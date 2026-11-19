@@ -152,7 +152,7 @@ func assertUpgradeCondition(t *testing.T, ctx context.Context, g *WithT, ns, nam
 		if err != nil {
 			return err
 		}
-		cond := apimeta.FindStatusCondition(status.Conditions, "UpgradeAvailable")
+		cond := apimeta.FindStatusCondition(status.Conditions, v1alpha1.ConditionTypeUpgradeAvailable)
 		if cond == nil {
 			return fmt.Errorf("UpgradeAvailable condition not populated on %s yet", name)
 		}

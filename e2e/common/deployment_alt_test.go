@@ -80,20 +80,20 @@ func testVerifyAltDeployment(t *testing.T, image string, expectedPort string, ex
 					"Conditions": And(
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type": Equal("UpgradeAvailable"),
+								"Type": Equal(v1alpha1.ConditionTypeUpgradeAvailable),
 								// Make sure that the check is not failing, it could be either true or false.
 								"Status": Not(Equal(metav1.ConditionUnknown)),
 							}),
 						),
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("Monitored"),
+								"Type":   Equal(v1alpha1.ConditionTypeMonitored),
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 						),
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("Healthy"),
+								"Type":   Equal(v1alpha1.ConditionTypeHealthy),
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 						),

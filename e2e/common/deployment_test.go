@@ -161,13 +161,13 @@ func testVerifyDeployment(t *testing.T, image string) {
 					"Conditions": And(
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("Monitored"),
+								"Type":   Equal(v1alpha1.ConditionTypeMonitored),
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 						),
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal("Healthy"),
+								"Type":   Equal(v1alpha1.ConditionTypeHealthy),
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 						),

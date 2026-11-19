@@ -92,9 +92,12 @@ func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasG
 }
 
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
+	// We use Watches() instead of For() in order to plug our own event handler: For() would always
+	// install the default one, which enqueues every CamelMonitor at once when the operator restarts.
+	// See startupSpreadHandler for details.
 	return builder.ControllerManagedBy(mgr).
 		Named("monitor-controller").
-		For(&v1alpha1.CamelMonitor{}, builder.WithPredicates(UpdateFalsePredicate{})).
+		Watches(&v1alpha1.CamelMonitor{}, &startupSpreadHandler{}, builder.WithPredicates(UpdateFalsePredicate{})).
 		WithOptions(controller.Options{MaxConcurrentReconciles: platform.GetMaxConcurrentReconciles()}).
 		Complete(r)
 }
