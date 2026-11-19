@@ -29,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
 )
 
 // nonManagedCamelDeployment represents a regular Camel application built and deployed outside the operator lifecycle.
@@ -88,7 +89,7 @@ func (app *nonManagedCamelDeployment) GetAnnotations() map[string]string {
 }
 
 // GetPods returns the pods backing the Camel application.
-func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Client, conf appObservabilityConf) ([]v1alpha1.PodInfo, error) {
+func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Client, clientset k8s.Interface, conf appObservabilityConf) ([]v1alpha1.PodInfo, error) {
 	var cpuLimitString string
 
 	cpuCoreLimit := kubernetes.GetResourcesLimitInMillis(app.GetResourcesLimits(), corev1.ResourceCPU)
@@ -96,7 +97,7 @@ func (app *nonManagedCamelDeployment) GetPods(ctx context.Context, c client.Clie
 		cpuLimitString = strconv.FormatInt(int64(cpuCoreLimit), 10)
 	}
 
-	return getPods(*app.httpClient, ctx, c, app.deploy.GetNamespace(),
+	return getPods(*app.httpClient, ctx, c, clientset, app.deploy.GetNamespace(),
 		app.GetMatchLabelsSelector(), conf, true, &cpuLimitString)
 }
 

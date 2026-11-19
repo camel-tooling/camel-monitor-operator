@@ -582,7 +582,7 @@ func TestGetPodsWithInspectionFailure(t *testing.T) {
 		MetricsEndpoints: []string{"/metrics"},
 		HealthEndpoints:  []string{"/health"},
 	}
-	podsInfo, err := getPods(http.Client{}, context.Background(), fakeClient, "default",
+	podsInfo, err := getPods(http.Client{}, context.Background(), fakeClient, nil, "default",
 		map[string]string{"app": "test"}, conf, true, nil)
 
 	assert.NoError(t, err)

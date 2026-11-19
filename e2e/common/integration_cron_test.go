@@ -67,6 +67,29 @@ func TestVerifyCamelKIntegrationCron(t *testing.T) {
 					),
 				}),
 			)
+
+			// The metrics are recovered from the Pod log: we check the exchanges and the
+			// information required to calculate the memory and cpu pressures are available
+			g.Eventually(
+				CamelMonitorStatus(t, ctx, ns, "sample-cron-it"),
+				TestTimeoutMedium,
+			).Should(
+				MatchFields(IgnoreExtras, Fields{
+					"Pods": ContainElement(
+						MatchFields(IgnoreExtras, Fields{
+							"Runtime": PointTo(MatchFields(IgnoreExtras, Fields{
+								"Exchange": PointTo(MatchFields(IgnoreExtras, Fields{
+									"Total":     BeNumerically(">", 0),
+									"Succeeded": BeNumerically(">", 0),
+								})),
+							})),
+							"JVMMemoryUsed":  PointTo(BeNumerically(">", 0)),
+							"JVMMemoryMax":   PointTo(BeNumerically(">", 0)),
+							"ProcessCPUUsed": PointTo(Not(BeEmpty())),
+						}),
+					),
+				}),
+			)
 		})
 	})
 }

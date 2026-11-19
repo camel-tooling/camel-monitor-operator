@@ -40,6 +40,7 @@ import (
 	"github.com/prometheus/common/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,7 +57,7 @@ type appObservabilityConf struct {
 }
 
 // getPods returns the pods backing the Camel application. You can provide an inspect flag to scrape health and metrics.
-func getPods(httpClient http.Client, ctx context.Context, c client.Client, namespace string,
+func getPods(httpClient http.Client, ctx context.Context, c client.Client, clientset k8s.Interface, namespace string,
 	matchLabelsSelector map[string]string, obsConf appObservabilityConf, inspect bool, cpuLimit *string) ([]v1alpha1.PodInfo, error) {
 	var podsInfo []v1alpha1.PodInfo
 
@@ -88,6 +89,10 @@ func getPods(httpClient http.Client, ctx context.Context, c client.Client, names
 
 		if isPodReady && inspect {
 			inspectPod(ctx, httpClient, &pod, &podInfo, podIp, obsConf, cpuLimit)
+		} else if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			// Attempt to read logs to recover metrics printed on shutdown
+			// (available since Camel 4.19 and in prometheus format since Camel 4.23)
+			inspectLog(ctx, clientset, &pod, &podInfo, obsConf, cpuLimit)
 		}
 
 		podsInfo = append(podsInfo, podInfo)
@@ -118,6 +123,65 @@ func inspectPod(ctx context.Context, httpClient http.Client, pod *corev1.Pod, po
 		}
 
 		podInfo.Reason += reason
+	}
+
+	err = setCPUPressure(podInfo, cpuLimit)
+	if err != nil {
+		obsConf.logger.Error(err, "Could not parse cpu usage/max value, skipping")
+	}
+}
+
+const (
+	// logMetricStart and logMetricEnd delimit, in a log line, the Prometheus metric printed on shutdown.
+	logMetricStart = "#METRIC-START#"
+	logMetricEnd   = "#METRIC-END#"
+)
+
+// extractLogMetrics returns the Prometheus metrics printed in the log. Only the content included between
+// the logMetricStart and logMetricEnd markers of each line is kept, any other content is discarded.
+func extractLogMetrics(logContent string) string {
+	var metrics strings.Builder
+
+	for line := range strings.SplitSeq(logContent, "\n") {
+		_, afterStart, found := strings.Cut(line, logMetricStart)
+		if !found {
+			continue
+		}
+
+		metric, _, found := strings.Cut(afterStart, logMetricEnd)
+		if !found {
+			continue
+		}
+
+		metrics.WriteString(strings.TrimSpace(metric))
+		metrics.WriteString("\n")
+	}
+
+	return metrics.String()
+}
+
+// inspectLog scan a log and scrape the metrics printed on shutdown (if any).
+func inspectLog(ctx context.Context, clientset k8s.Interface, pod *corev1.Pod,
+	podInfo *v1alpha1.PodInfo, obsConf appObservabilityConf, cpuLimit *string) {
+	shutdownLog, err := kubernetes.DumpLog(ctx, clientset, pod, corev1.PodLogOptions{TailLines: new(int64(128))})
+	if err != nil {
+		obsConf.logger.Error(err, "Could not recover Pod log content")
+
+		return
+	}
+
+	metrics := extractLogMetrics(shutdownLog)
+	if metrics == "" {
+		obsConf.logger.Debugf("No metrics found in Pod %s/%s log", pod.GetNamespace(), pod.GetName())
+
+		return
+	}
+
+	err = scrapeFromReaderAndSet(strings.NewReader(metrics), podInfo, obsConf)
+	if err != nil {
+		obsConf.logger.Error(err, "Could not scrape Prometheus log content")
+
+		return
 	}
 
 	err = setCPUPressure(podInfo, cpuLimit)
@@ -261,6 +325,7 @@ func setMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.P
 }
 
 // will return endpoint success, port success, error.
+// return found, portWorks, err.
 func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alpha1.PodInfo,
 	hostPort string, port string, endpoint string, obsConf appObservabilityConf) (bool, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s/%s", hostPort, endpoint), nil)
@@ -298,13 +363,24 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 		return false, true, fmt.Errorf("HTTP status not OK, it was %d", resp.StatusCode)
 	}
 
-	metrics, err := parseMetrics(resp.Body)
+	podInfo.ObservabilityService.MetricsEndpoint = endpoint
+	podInfo.ObservabilityService.MetricsPort = port
+
+	err = scrapeFromReaderAndSet(resp.Body, podInfo, obsConf)
 	if err != nil {
 		return false, true, err
 	}
 
-	podInfo.ObservabilityService.MetricsEndpoint = endpoint
-	podInfo.ObservabilityService.MetricsPort = port
+	return true, true, nil
+}
+
+// scrapeFromReaderAndSet takes care to scrape the info from a generic reader and apply the information
+// to the podInfo object.
+func scrapeFromReaderAndSet(reader io.Reader, podInfo *v1alpha1.PodInfo, obsConf appObservabilityConf) error {
+	metrics, err := parseMetrics(reader)
+	if err != nil {
+		return err
+	}
 
 	if podInfo.Runtime == nil {
 		podInfo.Runtime = &v1alpha1.RuntimeInfo{}
@@ -373,7 +449,7 @@ func collectMetrics(ctx context.Context, httpClient http.Client, podInfo *v1alph
 		}
 	}
 
-	return true, true, nil
+	return nil
 }
 
 func parseMetrics(reader io.Reader) (map[string]*dto.MetricFamily, error) {
