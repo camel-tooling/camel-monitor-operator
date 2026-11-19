@@ -36,8 +36,10 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
@@ -173,16 +175,29 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	selectors := map[ctrl.Object]cache.ByObject{
 		&appsv1.Deployment{}: selector,
 		&batchv1.CronJob{}:   selector,
+		// The operator only needs a few Pod fields: keep the informer memory footprint small.
+		&corev1.Pod{}: {Transform: slimPod},
 	}
 
 	options := cache.Options{
-		ByObject: selectors,
+		ByObject:         selectors,
+		DefaultTransform: cache.TransformStripManagedFields(),
 	}
 	if !platform.IsCurrentOperatorGlobal() {
 		options.DefaultNamespaces = cacheWatchNamespaces
 	}
 
+	// The scheme must be complete before creating the manager, as the client resolves
+	// the types excluded from the cache (see below) when it is built.
+	scheme := clientgoscheme.Scheme
+	exitOnError(apis.AddToScheme(scheme), "Could not add Camel Monitor API to scheme")
+	exitOnError(monitoringv1.AddToScheme(scheme), "Could not add Prometheus API to scheme")
+	exitOnError(integreatlyv1beta1.AddToScheme(scheme), "Could not add Grafana API to scheme")
+	exitOnError(consolev1.AddToScheme(scheme), "Could not add ConsolePlugin API to scheme")
+	exitOnError(operatorsv1alpha1.AddToScheme(scheme), "Could not add OLM API to scheme")
+
 	mgr, err := manager.New(cfg, manager.Options{
+		Scheme:                        scheme,
 		LeaderElection:                leaderElection,
 		LeaderElectionNamespace:       operatorNamespace,
 		LeaderElectionID:              leaderElectionID,
@@ -191,16 +206,23 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 		HealthProbeBindAddress:        ":" + strconv.Itoa(healthPort),
 		Metrics:                       metricsserver.Options{BindAddress: ":" + strconv.Itoa(monitoringPort)},
 		Cache:                         options,
+		Client: ctrl.Options{
+			Cache: &ctrl.CacheOptions{
+				// These resources are only read once per reconciliation to create or update them:
+				// read them straight from the API server instead of keeping an informer
+				// (and a full copy of every object of that kind) in memory.
+				DisableFor: []ctrl.Object{
+					&monitoringv1.PodMonitor{},
+					&monitoringv1.PrometheusRule{},
+					&integreatlyv1beta1.GrafanaDashboard{},
+				},
+			},
+		},
 	})
 	exitOnError(err, "Some error happened while creating a new manager")
 
 	log.Info("Configuring manager")
 	exitOnError(mgr.AddHealthzCheck("health-probe", healthz.Ping), "Unable add liveness check")
-	exitOnError(apis.AddToScheme(mgr.GetScheme()), "Could not add Camel Monitor API to scheme")
-	exitOnError(monitoringv1.AddToScheme(mgr.GetScheme()), "Could not add Prometheus API to scheme")
-	exitOnError(integreatlyv1beta1.AddToScheme(mgr.GetScheme()), "Could not add Grafana API to scheme")
-	exitOnError(consolev1.AddToScheme(mgr.GetScheme()), "Could not add ConsolePlugin API to scheme")
-	exitOnError(operatorsv1alpha1.AddToScheme(mgr.GetScheme()), "Could not add OLM API to scheme")
 	ctrlClient, err := client.FromManager(mgr)
 	exitOnError(err, "")
 	exitOnError(controller.AddToManager(ctx, mgr, ctrlClient), "")
@@ -212,6 +234,37 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 
 	log.Info("Starting the manager")
 	exitOnError(mgr.Start(ctx), "manager exited non-zero")
+}
+
+// slimPod reduces a Pod to the only fields used by the operator (identity, labels, phase, IP, conditions and
+// container ports) before it is stored in the informer cache.
+func slimPod(obj any) (any, error) {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		// i.e., a DeletedFinalStateUnknown tombstone
+		return obj, nil
+	}
+
+	containers := make([]corev1.Container, len(pod.Spec.Containers))
+	for i, c := range pod.Spec.Containers {
+		containers[i] = corev1.Container{Name: c.Name, Ports: c.Ports}
+	}
+
+	return &corev1.Pod{
+		TypeMeta:          pod.TypeMeta,
+		Name:              pod.Name,
+		Namespace:         pod.Namespace,
+		UID:               pod.UID,
+		ResourceVersion:   pod.ResourceVersion,
+		Labels:            pod.Labels,
+		DeletionTimestamp: pod.DeletionTimestamp,
+		Spec:              corev1.PodSpec{Containers: containers},
+		Status: corev1.PodStatus{
+			Phase:      pod.Status.Phase,
+			PodIP:      pod.Status.PodIP,
+			Conditions: pod.Status.Conditions,
+		},
+	}, nil
 }
 
 func getLabelSelector() (labels.Selector, error) {
