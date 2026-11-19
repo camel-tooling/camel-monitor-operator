@@ -36,16 +36,19 @@ const (
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=camelmonitors,scope=Namespaced,shortName=cmon,categories=camel
-// +kubebuilder:printcolumn:name="Info",type=string,JSONPath=`.status.info`,description="The Camel App info"
+// +kubebuilder:printcolumn:name="Runtime",type=string,JSONPath=`.status.runtimeSummary.runtimeProvider`,description="The runtime provider"
+// +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.status.runtimeSummary.runtimeVersion`,description="The runtime version"
+// +kubebuilder:printcolumn:name="Camel",type=string,JSONPath=`.status.runtimeSummary.camelVersion`,description="The Camel version"
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`,description="The Camel App phase"
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`,description="The Camel App Pods"
+// +kubebuilder:printcolumn:name="Exchanges",type=string,JSONPath=`.status.runtimeSummary.exchange.total`,description="Total exchanges"
 // +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="Healthy")].status`
 // +kubebuilder:printcolumn:name="Monitored",type=string,JSONPath=`.status.conditions[?(@.type=="Monitored")].status`
 // +kubebuilder:printcolumn:name="Memory Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="MemoryPressure")].status`
 // +kubebuilder:printcolumn:name="CPU Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="CPUPressure")].status`
 // +kubebuilder:printcolumn:name="Upgrade available",type=string,JSONPath=`.status.conditions[?(@.type=="UpgradeAvailable")].status`
 // +kubebuilder:printcolumn:name="Exchange SLI",type=string,JSONPath=`.status.sliExchangeSuccessRate.status`,description="The success rate SLI"
-// +kubebuilder:printcolumn:name="Last Exchange",type=date,JSONPath=`.status.sliExchangeSuccessRate.lastTimestamp`,description="Last exchange age"
+// +kubebuilder:printcolumn:name="Last Exchange",type=date,JSONPath=`.status.runtimeSummary.exchange.lastTimestamp`,description="Last exchange age"
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 
@@ -74,8 +77,8 @@ type CamelMonitorStatus struct {
 	Pods []PodInfo `json:"pods,omitempty"`
 	// The number of replicas (pods running)
 	Replicas *int32 `json:"replicas,omitempty"`
-	// A resume of the main App parameters
-	Info string `json:"info,omitempty"`
+	// Summary of the various pods
+	RuntimeSummary *RuntimeInfo `json:"runtimeSummary,omitempty"`
 	// The percentage of success rate
 	SuccessRate *SLIExchangeSuccessRate `json:"sliExchangeSuccessRate,omitempty"`
 	// The conditions catching more detailed information

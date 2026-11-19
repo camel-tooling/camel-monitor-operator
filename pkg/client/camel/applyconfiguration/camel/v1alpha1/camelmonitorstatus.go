@@ -37,8 +37,8 @@ type CamelMonitorStatusApplyConfiguration struct {
 	Pods []PodInfoApplyConfiguration `json:"pods,omitempty"`
 	// The number of replicas (pods running)
 	Replicas *int32 `json:"replicas,omitempty"`
-	// A resume of the main App parameters
-	Info *string `json:"info,omitempty"`
+	// Summary of the various pods
+	RuntimeSummary *RuntimeInfoApplyConfiguration `json:"runtimeSummary,omitempty"`
 	// The percentage of success rate
 	SuccessRate *SLIExchangeSuccessRateApplyConfiguration `json:"sliExchangeSuccessRate,omitempty"`
 	// The conditions catching more detailed information
@@ -88,11 +88,11 @@ func (b *CamelMonitorStatusApplyConfiguration) WithReplicas(value int32) *CamelM
 	return b
 }
 
-// WithInfo sets the Info field in the declarative configuration to the given value
+// WithRuntimeSummary sets the RuntimeSummary field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Info field is set to the value of the last call.
-func (b *CamelMonitorStatusApplyConfiguration) WithInfo(value string) *CamelMonitorStatusApplyConfiguration {
-	b.Info = &value
+// If called multiple times, the RuntimeSummary field is set to the value of the last call.
+func (b *CamelMonitorStatusApplyConfiguration) WithRuntimeSummary(value *RuntimeInfoApplyConfiguration) *CamelMonitorStatusApplyConfiguration {
+	b.RuntimeSummary = value
 	return b
 }
 

@@ -65,7 +65,7 @@ func TestGetSLIExchangeSuccessRate(t *testing.T) {
 	assert.Equal(t, v1alpha1.SLIExchangeStatusSuccess, result.Status)
 }
 
-func TestGetInfo(t *testing.T) {
+func TestGetSummary(t *testing.T) {
 	now := metav1.NewTime(time.Now())
 	later := metav1.NewTime(time.Now().Add(1 * time.Minute))
 
@@ -125,6 +125,38 @@ func TestGetInfo(t *testing.T) {
 			},
 		},
 		{
+			name: "first pod without runtime info is skipped",
+			pods: []v1alpha1.PodInfo{
+				{Ready: false},
+				{
+					Runtime: &v1alpha1.RuntimeInfo{
+						RuntimeProvider: "main",
+						RuntimeVersion:  "4.5.0",
+						CamelVersion:    "4.5.0",
+						Exchange: &v1alpha1.ExchangeInfo{
+							Total:         10,
+							Failed:        1,
+							Pending:       2,
+							Succeeded:     7,
+							LastTimestamp: &now,
+						},
+					},
+				},
+			},
+			expected: &v1alpha1.RuntimeInfo{
+				RuntimeProvider: "main",
+				RuntimeVersion:  "4.5.0",
+				CamelVersion:    "4.5.0",
+				Exchange: &v1alpha1.ExchangeInfo{
+					Total:         10,
+					Failed:        1,
+					Pending:       2,
+					Succeeded:     7,
+					LastTimestamp: &now,
+				},
+			},
+		},
+		{
 			name: "runtime present but no exchange data",
 			pods: []v1alpha1.PodInfo{
 				{
@@ -149,14 +181,17 @@ func TestGetInfo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := getInfo(tt.pods)
+			// The summary is stored in the app status, as done by the monitor action
+			status := v1alpha1.CamelMonitorStatus{RuntimeSummary: getRuntimeSummary(tt.pods)}
+			result := status.RuntimeSummary
 
 			if tt.expected == nil {
-				assert.Nil(t, result)
+				assert.Nil(t, status.RuntimeSummary)
 				return
 			}
 
-			assert.NotNil(t, result)
+			require.NotNil(t, status.RuntimeSummary)
+			require.NotNil(t, result.Exchange)
 			assert.Equal(t, tt.expected.RuntimeProvider, result.RuntimeProvider)
 			assert.Equal(t, tt.expected.RuntimeVersion, result.RuntimeVersion)
 			assert.Equal(t, tt.expected.CamelVersion, result.CamelVersion)
@@ -170,48 +205,6 @@ func TestGetInfo(t *testing.T) {
 				assert.True(t,
 					tt.expected.Exchange.LastTimestamp.Equal(result.Exchange.LastTimestamp),
 				)
-			}
-		})
-	}
-}
-
-func TestFormatRuntimeInfo(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    *v1alpha1.RuntimeInfo
-		expected string
-	}{
-		{
-			name: "valid runtime info",
-			input: &v1alpha1.RuntimeInfo{
-				RuntimeProvider: "SpringBoot",
-				RuntimeVersion:  "3.2.0",
-				CamelVersion:    "4.0.0",
-			},
-			expected: "SpringBoot - 3.2.0 (4.0.0)",
-		},
-		{
-			name: "empty provider returns empty string",
-			input: &v1alpha1.RuntimeInfo{
-				RuntimeProvider: "",
-				RuntimeVersion:  "3.2.0",
-				CamelVersion:    "4.0.0",
-			},
-			expected: "",
-		},
-		{
-			name:     "nil fields except provider empty",
-			input:    &v1alpha1.RuntimeInfo{},
-			expected: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := formatRuntimeInfo(tt.input)
-
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
 			}
 		})
 	}

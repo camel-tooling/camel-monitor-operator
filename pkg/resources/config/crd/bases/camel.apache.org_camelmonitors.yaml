@@ -36,9 +36,17 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: The Camel App info
-      jsonPath: .status.info
-      name: Info
+    - description: The runtime provider
+      jsonPath: .status.runtimeSummary.runtimeProvider
+      name: Runtime
+      type: string
+    - description: The runtime version
+      jsonPath: .status.runtimeSummary.runtimeVersion
+      name: Version
+      type: string
+    - description: The Camel version
+      jsonPath: .status.runtimeSummary.camelVersion
+      name: Camel
       type: string
     - description: The Camel App phase
       jsonPath: .status.phase
@@ -47,6 +55,10 @@ spec:
     - description: The Camel App Pods
       jsonPath: .status.replicas
       name: Replicas
+      type: string
+    - description: Total exchanges
+      jsonPath: .status.runtimeSummary.exchange.total
+      name: Exchanges
       type: string
     - jsonPath: .status.conditions[?(@.type=="Healthy")].status
       name: Healthy
@@ -68,7 +80,7 @@ spec:
       name: Exchange SLI
       type: string
     - description: Last exchange age
-      jsonPath: .status.sliExchangeSuccessRate.lastTimestamp
+      jsonPath: .status.runtimeSummary.exchange.lastTimestamp
       name: Last Exchange
       type: date
     name: v1alpha1
@@ -158,9 +170,6 @@ spec:
                 type: array
               image:
                 description: the image used to run the application
-                type: string
-              info:
-                description: A resume of the main App parameters
                 type: string
               phase:
                 description: the actual phase
@@ -276,6 +285,43 @@ spec:
                 description: The number of replicas (pods running)
                 format: int32
                 type: integer
+              runtimeSummary:
+                description: Summary of the various pods
+                properties:
+                  camelVersion:
+                    description: the Camel core version
+                    type: string
+                  exchange:
+                    description: Information about the exchange
+                    properties:
+                      failed:
+                        description: The total number of exchanges failed
+                        type: integer
+                      lastTimestamp:
+                        description: the last message timestamp
+                        format: date-time
+                        type: string
+                      pending:
+                        description: The total number of exchanges pending (in Camel
+                          jargon, inflight exchanges)
+                        type: integer
+                      succeed:
+                        description: The total number of exchanges succeeded
+                        type: integer
+                      total:
+                        description: The total number of exchanges
+                        type: integer
+                    type: object
+                  runtimeProvider:
+                    description: the runtime provider
+                    type: string
+                  runtimeVersion:
+                    description: the runtime version
+                    type: string
+                  status:
+                    description: the status as reported by health endpoint
+                    type: string
+                type: object
               sliExchangeSuccessRate:
                 description: The percentage of success rate
                 properties:

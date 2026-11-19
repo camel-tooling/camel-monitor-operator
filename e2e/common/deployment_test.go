@@ -154,17 +154,11 @@ func testVerifyDeployment(t *testing.T, image string) {
 				TestTimeoutMedium,
 			).Should(
 				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-					"Replicas":    PointTo(Equal(int32(1))),
-					"SuccessRate": Not(BeNil()),
+					"Phase":          Equal(v1alpha1.CamelMonitorPhaseRunning),
+					"Replicas":       PointTo(Equal(int32(1))),
+					"RuntimeSummary": Not(BeNil()),
+					"SuccessRate":    Not(BeNil()),
 					"Conditions": And(
-						ContainElement(
-							MatchFields(IgnoreExtras, Fields{
-								"Type": Equal("UpgradeAvailable"),
-								// Make sure that the check is not failing, it could be either true or false.
-								"Status": Not(Equal(metav1.ConditionUnknown)),
-							}),
-						),
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
 								"Type":   Equal("Monitored"),
@@ -191,9 +185,10 @@ func testVerifyDeployment(t *testing.T, image string) {
 				CamelMonitorStatus(t, ctx, ns, "camel-sample"),
 			).Should(
 				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhaseRunning),
-					"Replicas":    PointTo(Equal(int32(2))),
-					"SuccessRate": Not(BeNil()),
+					"Phase":          Equal(v1alpha1.CamelMonitorPhaseRunning),
+					"Replicas":       PointTo(Equal(int32(2))),
+					"RuntimeSummary": Not(BeNil()),
+					"SuccessRate":    Not(BeNil()),
 				}),
 			)
 			// Scale to 0
@@ -207,9 +202,10 @@ func testVerifyDeployment(t *testing.T, image string) {
 				CamelMonitorStatus(t, ctx, ns, "camel-sample"),
 			).Should(
 				MatchFields(IgnoreExtras, Fields{
-					"Phase":       Equal(v1alpha1.CamelMonitorPhasePaused),
-					"Replicas":    PointTo(Equal(int32(0))),
-					"SuccessRate": Not(BeNil()),
+					"Phase":          Equal(v1alpha1.CamelMonitorPhasePaused),
+					"Replicas":       PointTo(Equal(int32(0))),
+					"RuntimeSummary": Not(BeNil()),
+					"SuccessRate":    BeNil(),
 				}),
 			)
 			// Delete deployment

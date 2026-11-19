@@ -114,9 +114,11 @@ func TestMonitorActionDeploymentWithStatusScaledTo0(t *testing.T) {
 	}
 	// NOTE: these information should still exists when the app is scaled to 0
 	app.Status = v1alpha1.CamelMonitorStatus{
-		Info: "existing info",
-		SuccessRate: &v1alpha1.SLIExchangeSuccessRate{
-			LastTimestamp: &metav1.Time{Time: lastExchangeTime},
+		RuntimeSummary: &v1alpha1.RuntimeInfo{
+			CamelVersion: "1.2.3",
+			Exchange: &v1alpha1.ExchangeInfo{
+				LastTimestamp: &metav1.Time{Time: lastExchangeTime},
+			},
 		},
 	}
 
@@ -154,8 +156,8 @@ func TestMonitorActionDeploymentWithStatusScaledTo0(t *testing.T) {
 	assert.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
 	assert.Equal(t, "No active Pod available", healthy.Message)
-	assert.Equal(t, "existing info", target.Status.Info)
-	assert.Equal(t, lastExchangeTime, target.Status.SuccessRate.LastTimestamp.Time)
+	assert.Equal(t, "1.2.3", target.Status.RuntimeSummary.CamelVersion)
+	assert.Equal(t, lastExchangeTime, target.Status.RuntimeSummary.Exchange.LastTimestamp.Time)
 }
 
 func TestMonitorActionDeploymentNonActivePods(t *testing.T) {
