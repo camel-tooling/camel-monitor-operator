@@ -25,6 +25,8 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/platform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
@@ -89,6 +91,67 @@ func TestGetNamespacesSelector(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSlimPod(t *testing.T) {
+	now := metav1.Now()
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "my-pod",
+			Namespace:         "ns",
+			UID:               "uid",
+			ResourceVersion:   "42",
+			Labels:            map[string]string{"app": "foo"},
+			Annotations:       map[string]string{"big": "annotation"},
+			DeletionTimestamp: &now,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:  "main",
+				Image: "my-image",
+				Env:   []corev1.EnvVar{{Name: "A", Value: "B"}},
+				Ports: []corev1.ContainerPort{{Name: "jolokia", ContainerPort: 8778}},
+			}},
+			Volumes: []corev1.Volume{{Name: "vol"}},
+		},
+		Status: corev1.PodStatus{
+			Phase:             corev1.PodRunning,
+			PodIP:             "10.0.0.1",
+			Conditions:        []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+			ContainerStatuses: []corev1.ContainerStatus{{Name: "main"}},
+		},
+	}
+
+	res, err := slimPod(pod)
+	require.NoError(t, err)
+
+	slim, ok := res.(*corev1.Pod)
+	require.True(t, ok)
+
+	assert.Equal(t, "my-pod", slim.Name)
+	assert.Equal(t, "ns", slim.Namespace)
+	assert.Equal(t, "42", slim.ResourceVersion)
+	assert.Equal(t, pod.Labels, slim.Labels)
+	assert.NotNil(t, slim.DeletionTimestamp)
+	assert.Empty(t, slim.Annotations)
+	assert.Equal(t, corev1.PodRunning, slim.Status.Phase)
+	assert.Equal(t, "10.0.0.1", slim.Status.PodIP)
+	assert.Equal(t, pod.Status.Conditions, slim.Status.Conditions)
+	assert.Empty(t, slim.Status.ContainerStatuses)
+	assert.Empty(t, slim.Spec.Volumes)
+	require.Len(t, slim.Spec.Containers, 1)
+	assert.Equal(t, pod.Spec.Containers[0].Ports, slim.Spec.Containers[0].Ports)
+	assert.Empty(t, slim.Spec.Containers[0].Env)
+	assert.Empty(t, slim.Spec.Containers[0].Image)
+
+	// the original object must not be mutated
+	assert.Len(t, pod.Spec.Containers[0].Env, 1)
+}
+
+func TestSlimPod_NotAPod(t *testing.T) {
+	res, err := slimPod("tombstone")
+	require.NoError(t, err)
+	assert.Equal(t, "tombstone", res)
 }
 
 func TestGetLabelSelector(t *testing.T) {
