@@ -147,7 +147,6 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 			Reason:             "Scheduling",
 			Message:            schedulingMessage,
 		})
-		targetApp.Status.Info = info
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{

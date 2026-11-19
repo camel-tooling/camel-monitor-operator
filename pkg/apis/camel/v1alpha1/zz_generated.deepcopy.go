@@ -99,6 +99,11 @@ func (in *CamelMonitorStatus) DeepCopyInto(out *CamelMonitorStatus) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.RuntimeSummary != nil {
+		in, out := &in.RuntimeSummary, &out.RuntimeSummary
+		*out = new(RuntimeInfo)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.SuccessRate != nil {
 		in, out := &in.SuccessRate, &out.SuccessRate
 		*out = new(SLIExchangeSuccessRate)

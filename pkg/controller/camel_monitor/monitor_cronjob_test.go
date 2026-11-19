@@ -153,7 +153,7 @@ func TestMonitorActionDeploymentCronJobActive(t *testing.T) {
 	healthy := target.Status.GetCondition("Healthy")
 	assert.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionTrue, healthy.Status)
-	assert.Equal(t, "1 out of last 1 job succeeded", target.Status.Info)
+	assert.Equal(t, "1 out of last 1 job succeeded", healthy.Message)
 }
 
 func TestMonitorActionDeploymentCronJobFailed(t *testing.T) {
@@ -212,5 +212,5 @@ func TestMonitorActionDeploymentCronJobFailed(t *testing.T) {
 	healthy := target.Status.GetCondition("Healthy")
 	assert.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionFalse, healthy.Status)
-	assert.Equal(t, "1 out of last 2 job succeeded", target.Status.Info)
+	assert.Equal(t, "1 out of last 2 job succeeded", healthy.Message)
 }

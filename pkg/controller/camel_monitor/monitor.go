@@ -85,8 +85,7 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	// Important: we keep any previous existing info, so that, in case of scaling to 0
 	// we maintain the latest scraped information available.
 	targetApp.Status = v1alpha1.CamelMonitorStatus{
-		Info:        cmon.Status.Info,
-		SuccessRate: cmon.Status.SuccessRate,
+		RuntimeSummary: cmon.Status.RuntimeSummary,
 	}
 
 	deployImage := nonManagedApp.GetAppImage()
@@ -103,19 +102,20 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	targetApp.Status.Replicas = nonManagedApp.GetReplicas()
 
 	if pods != nil {
-		// Only if any pod is ready
-		targetRuntimeInfo := getInfo(pods)
-		if targetRuntimeInfo != nil {
-			targetApp.Status.Info = formatRuntimeInfo(targetRuntimeInfo)
-			checkVersionUpgrade(ctx, targetRuntimeInfo, &targetApp.Status)
+		// Actual runtime summary
+		targetRuntimeSummary := getRuntimeSummary(pods)
+		if targetRuntimeSummary != nil {
+			targetApp.Status.RuntimeSummary = targetRuntimeSummary
+			checkVersionUpgrade(ctx, targetRuntimeSummary, &targetApp.Status)
 		}
 
-		appRuntimeInfo := getInfo(cmon.Status.Pods)
-		if appRuntimeInfo != nil && targetRuntimeInfo != nil {
+		// Previous runtime summary (so we can calculate the diff)
+		appRuntimeInfo := getRuntimeSummary(cmon.Status.Pods)
+		if appRuntimeInfo != nil && targetRuntimeSummary != nil {
 			pollingInterval := getPollingInterval(targetApp)
 			sliErrPerc := getSLIExchangeErrorThreshold(targetApp)
 			sliWarnPerc := getSLIExchangeWarningThreshold(targetApp)
-			targetApp.Status.SuccessRate = getSLIExchangeSuccessRate(*appRuntimeInfo, *targetRuntimeInfo, &pollingInterval, sliErrPerc, sliWarnPerc)
+			targetApp.Status.SuccessRate = getSLIExchangeSuccessRate(*appRuntimeInfo, *targetRuntimeSummary, &pollingInterval, sliErrPerc, sliWarnPerc)
 		}
 
 		if action.hasPrometheusCRDs && platform.GetCreatePrometheusPodMonitor() == "true" {
@@ -175,7 +175,7 @@ func lookupObject(ctx context.Context, c client.Client, kind, ns string, name st
 	return &obj, nil
 }
 
-func getInfo(pods []v1alpha1.PodInfo) *v1alpha1.RuntimeInfo {
+func getRuntimeSummary(pods []v1alpha1.PodInfo) *v1alpha1.RuntimeInfo {
 	runtimeInfo := v1alpha1.RuntimeInfo{
 		Exchange: &v1alpha1.ExchangeInfo{},
 	}
@@ -209,17 +209,6 @@ func getInfo(pods []v1alpha1.PodInfo) *v1alpha1.RuntimeInfo {
 	}
 
 	return &runtimeInfo
-}
-
-func formatRuntimeInfo(runtimeInfo *v1alpha1.RuntimeInfo) string {
-	if runtimeInfo.RuntimeProvider == "" {
-		return ""
-	}
-
-	return fmt.Sprintf(
-		"%s - %s (%s)",
-		runtimeInfo.RuntimeProvider, runtimeInfo.RuntimeVersion, runtimeInfo.CamelVersion,
-	)
 }
 
 func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo, targetAppStatus *v1alpha1.CamelMonitorStatus) {
