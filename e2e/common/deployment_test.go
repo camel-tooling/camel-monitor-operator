@@ -31,6 +31,7 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -156,7 +157,7 @@ func testVerifyDeployment(t *testing.T, image string) {
 				MatchFields(IgnoreExtras, Fields{
 					"Phase":          Equal(v1alpha1.CamelMonitorPhaseRunning),
 					"Replicas":       PointTo(Equal(int32(1))),
-					"RuntimeSummary": Not(BeNil()),
+					"RuntimeSummary": runtimeSummaryWithExchanges(),
 					"SuccessRate":    Not(BeNil()),
 					"Conditions": And(
 						ContainElement(
@@ -187,7 +188,7 @@ func testVerifyDeployment(t *testing.T, image string) {
 				MatchFields(IgnoreExtras, Fields{
 					"Phase":          Equal(v1alpha1.CamelMonitorPhaseRunning),
 					"Replicas":       PointTo(Equal(int32(2))),
-					"RuntimeSummary": Not(BeNil()),
+					"RuntimeSummary": runtimeSummaryWithExchanges(),
 					"SuccessRate":    Not(BeNil()),
 				}),
 			)
@@ -204,7 +205,7 @@ func testVerifyDeployment(t *testing.T, image string) {
 				MatchFields(IgnoreExtras, Fields{
 					"Phase":          Equal(v1alpha1.CamelMonitorPhasePaused),
 					"Replicas":       PointTo(Equal(int32(0))),
-					"RuntimeSummary": Not(BeNil()),
+					"RuntimeSummary": runtimeSummaryWithExchanges(),
 					"SuccessRate":    BeNil(),
 				}),
 			)
@@ -219,4 +220,13 @@ func testVerifyDeployment(t *testing.T, image string) {
 			g.Eventually(CamelMonitors(t, ctx, ns)).Should(BeEmpty())
 		})
 	})
+}
+
+// runtimeSummaryWithExchanges matches a runtime summary that has already processed at least one exchange.
+func runtimeSummaryWithExchanges() types.GomegaMatcher {
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Exchange": PointTo(MatchFields(IgnoreExtras, Fields{
+			"Total": BeNumerically(">", 0),
+		})),
+	}))
 }
