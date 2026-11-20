@@ -19,7 +19,6 @@ package monitor
 
 import (
 	"context"
-	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
@@ -89,11 +88,10 @@ func addCamelMonitorPrometheusCondition(target *v1alpha1.CamelMonitor, err error
 	}
 
 	target.Status.AddCondition(metav1.Condition{
-		Type:               v1alpha1.ConditionTypePrometheusPodMonitor,
-		Status:             statusCond,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		Reason:             "PodMonitorAdded",
-		Message:            message,
+		Type:    v1alpha1.ConditionTypePrometheusPodMonitor,
+		Status:  statusCond,
+		Reason:  "PodMonitorAdded",
+		Message: message,
 	})
 }
 
