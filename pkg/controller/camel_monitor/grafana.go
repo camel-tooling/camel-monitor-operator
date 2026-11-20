@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
@@ -111,11 +110,10 @@ func addCamelMonitorGrafanaCondition(target *v1alpha1.CamelMonitor, err error) {
 	}
 
 	target.Status.AddCondition(metav1.Condition{
-		Type:               v1alpha1.ConditionTypeGrafanaDashboard,
-		Status:             statusCond,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		Reason:             "GrafanaDashboardAdded",
-		Message:            message,
+		Type:    v1alpha1.ConditionTypeGrafanaDashboard,
+		Status:  statusCond,
+		Reason:  "GrafanaDashboardAdded",
+		Message: message,
 	})
 }
 

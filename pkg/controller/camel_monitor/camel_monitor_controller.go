@@ -19,7 +19,9 @@ package monitor
 
 import (
 	"context"
+	"math/rand/v2"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
@@ -30,6 +32,7 @@ import (
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/monitoring"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -82,6 +85,7 @@ func newReconciler(mgr manager.Manager, c client.Client, hasPrometheusCRDs, hasG
 			recorder:          mgr.GetEventRecorder("camel-monitor-controller"),
 			hasPrometheusCRDs: hasPrometheusCRDs,
 			hasGrafanaCRDs:    hasGrafanaCRDs,
+			startedAt:         time.Now(),
 		},
 		schema.GroupVersionKind{
 			Group:   v1alpha1.SchemeGroupVersion.Group,
@@ -110,6 +114,10 @@ type reconcileApp struct {
 	// We cache the discovery call for performance reasons
 	hasPrometheusCRDs bool
 	hasGrafanaCRDs    bool
+	// startedAt is the time the operator started: the shuffle is limited to the operator start-up.
+	startedAt time.Time
+	// shuffled holds the CamelMonitors (types.NamespacedName) already shuffled by this operator instance.
+	shuffled sync.Map
 }
 
 func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -120,10 +128,23 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 	err := r.client.Get(ctx, request.NamespacedName, &instance)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			r.shuffled.Delete(request.NamespacedName)
+
 			return reconcile.Result{}, nil
 		}
 
 		return reconcile.Result{}, err
+	}
+
+	// Right after the operator starts all the CamelMonitors without status are reconciled at once: we spread them.
+	if delay := r.startupShuffleDelay(&instance, request.NamespacedName, time.Now()); delay > 0 {
+		return reconcile.Result{RequeueAfter: delay}, nil
+	}
+
+	// The polling loop is driven by an in-memory requeue, lost when the operator restarts: all the resources are
+	// reconciled at once. We only monitor the ones due, the others wait for their next cycle.
+	if remaining := timeUntilNextPoll(&instance, time.Now()); remaining > 0 {
+		return reconcile.Result{RequeueAfter: remaining}, nil
 	}
 
 	if len(actions) == 0 {
@@ -178,6 +199,54 @@ func (r *reconcileApp) Reconcile(ctx context.Context, request reconcile.Request)
 	}
 
 	return reconcile.Result{RequeueAfter: getPollingInterval(target)}, nil
+}
+
+// timeUntilNextPoll returns the time left until the next monitoring cycle of the CamelMonitor is due, which
+// is the last monitoring time plus the polling interval. It returns 0 if the resource is due or it was never monitored.
+func timeUntilNextPoll(cmon *v1alpha1.CamelMonitor, now time.Time) time.Duration {
+	if cmon.Status.LastMonitoredTime == nil || cmon.Status.LastMonitoredTime.IsZero() {
+		return 0
+	}
+
+	return max(cmon.Status.LastMonitoredTime.Add(getPollingInterval(cmon)).Sub(now), 0)
+}
+
+// startupShuffleDelay returns how long the first monitoring of the CamelMonitor must be postponed, in order to spread the
+// load when the operator starts (restart or reinstall, when the CamelMonitors have no status and would all be monitored
+// at once). The delay is applied only if:
+//   - the shuffle is enabled (POLLING_SHUFFLE_PERCENT)
+//   - the CamelMonitor has no status
+//   - the operator started less than a polling interval ago (it does not apply to the CamelMonitors created later)
+//   - the CamelMonitor was not shuffled yet (otherwise it would be postponed forever as it has no status until monitored)
+//
+// It returns 0 when the CamelMonitor must be monitored right away.
+func (r *reconcileApp) startupShuffleDelay(cmon *v1alpha1.CamelMonitor, key types.NamespacedName, now time.Time) time.Duration {
+	percent := platform.GetPollingShufflePercent()
+	if percent <= 0 || cmon.Status.Phase != "" || cmon.Status.LastMonitoredTime != nil {
+		return 0
+	}
+
+	interval := getPollingInterval(cmon)
+	if now.Sub(r.startedAt) > interval {
+		return 0
+	}
+
+	if _, alreadyShuffled := r.shuffled.LoadOrStore(key, struct{}{}); alreadyShuffled {
+		return 0
+	}
+
+	return shuffleDelay(interval, percent)
+}
+
+// shuffleDelay returns a random duration in the range [0, percent of the interval). It returns 0 if the range is empty.
+func shuffleDelay(interval time.Duration, percent int) time.Duration {
+	window := interval * time.Duration(percent) / 100
+	if window <= 0 {
+		return 0
+	}
+
+	// The shuffle is only meant to spread the load, it does not need to be cryptographically secure.
+	return rand.N(window) //nolint:gosec
 }
 
 func (r *reconcileApp) update(ctx context.Context, base *v1alpha1.CamelMonitor, target *v1alpha1.CamelMonitor, log *log.Logger) error {
