@@ -119,7 +119,7 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 		}
 
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               "Healthy",
+			Type:               v1alpha1.ConditionTypeHealthy,
 			Status:             healthCond,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 			Reason:             "HealthCheckCompleted",
@@ -141,7 +141,7 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 		}
 
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               "CronJobExecution",
+			Type:               v1alpha1.ConditionTypeCronJobExecution,
 			Status:             metav1.ConditionTrue,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 			Reason:             "Scheduling",
@@ -150,7 +150,7 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               "Monitored",
+		Type:               v1alpha1.ConditionTypeMonitored,
 		Status:             monitorCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "MonitoringComplete",

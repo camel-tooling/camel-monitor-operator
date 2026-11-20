@@ -89,7 +89,7 @@ func addCamelMonitorPrometheusCondition(target *v1alpha1.CamelMonitor, err error
 	}
 
 	target.Status.AddCondition(metav1.Condition{
-		Type:               "PrometheusPodMonitor",
+		Type:               v1alpha1.ConditionTypePrometheusPodMonitor,
 		Status:             statusCond,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "PodMonitorAdded",
