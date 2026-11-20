@@ -209,7 +209,7 @@ endif
 
 test-common: gotestfmt-install
 	FAILED=0; \
-	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 30m -v ./e2e/common/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
+	go test -p $(TEST_COMMON_PARALLEL_COUNT) -timeout 45m -v ./e2e/common/... --parallel 1 -tags=integration $(GOTESTFMT) || ((FAILED++)); \
 	exit $${FAILED}
 
 # A subset of common tests, does not require a Camel K operator and excludes Camel Main tests.

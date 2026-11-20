@@ -241,7 +241,7 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 		err = errors.New("unknown runtime provider " + runtimeInfo.RuntimeProvider)
 	}
 
-	conditionType := "UpgradeAvailable"
+	conditionType := v1alpha1.ConditionTypeUpgradeAvailable
 	statusCondition := metav1.ConditionFalse
 	reason := "UpToDate"
 	message := "runtime version is up to date with latest release"

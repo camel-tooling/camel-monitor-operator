@@ -576,14 +576,14 @@ func parseHealthStatus(reader io.Reader) (string, error) {
 func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) {
 	if targetApp.Status.Phase == v1alpha1.CamelMonitorPhasePaused || len(pods) == 0 {
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               "Monitored",
+			Type:               v1alpha1.ConditionTypeMonitored,
 			Status:             metav1.ConditionUnknown,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 			Reason:             "MonitoringComplete",
 			Message:            "No active Pod available",
 		})
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               "Healthy",
+			Type:               v1alpha1.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 			Reason:             "HealthCheckCompleted",
@@ -602,7 +602,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               "Monitored",
+		Type:               v1alpha1.ConditionTypeMonitored,
 		Status:             monitoredCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             monitoredReason,
@@ -620,7 +620,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               "Healthy",
+		Type:               v1alpha1.ConditionTypeHealthy,
 		Status:             healthCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "HealthCheckCompleted",
@@ -636,7 +636,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               "MemoryPressure",
+		Type:               v1alpha1.ConditionTypeMemoryPressure,
 		Status:             memoryPressureCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "JVMMemoryPressure",
@@ -652,7 +652,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               "CPUPressure",
+		Type:               v1alpha1.ConditionTypeCPUPressure,
 		Status:             cpuPressureCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             "CPUPressure",

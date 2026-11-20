@@ -65,8 +65,8 @@ func TestAddPrometheusPodMonitor_Success(t *testing.T) {
 	assert.Equal(t, "/metrics", pm.Spec.PodMetricsEndpoints[0].Path)
 	assert.Len(t, pm.Spec.PodMetricsEndpoints[0].RelabelConfigs, 1)
 	assert.Equal(t, "${1}:8080", *pm.Spec.PodMetricsEndpoints[0].RelabelConfigs[0].Replacement)
-	require.NotNil(t, target.Status.GetCondition("PrometheusPodMonitor"))
-	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition("PrometheusPodMonitor").Status)
+	require.NotNil(t, target.Status.GetCondition(v1alpha1.ConditionTypePrometheusPodMonitor))
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypePrometheusPodMonitor).Status)
 }
 
 func TestAddPrometheusPodMonitor_NoPods(t *testing.T) {

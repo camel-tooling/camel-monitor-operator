@@ -48,12 +48,12 @@ func TestSetMonitoringConditionHelperNoPods(t *testing.T) {
 
 	setMonitoringCondition(&v1alpha1.CamelMonitor{}, target, nil)
 
-	monitored := target.Status.GetCondition("Monitored")
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
 	require.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
 	assert.Equal(t, "No active Pod available", monitored.Message)
 
-	healthy := target.Status.GetCondition("Healthy")
+	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)
 	require.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
 }
@@ -68,11 +68,11 @@ func TestSetMonitoringConditionHelperAllHealthy(t *testing.T) {
 
 	setMonitoringCondition(src, target, pods)
 
-	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition("Monitored").Status)
-	assert.Equal(t, "Success", target.Status.GetCondition("Monitored").Message)
-	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition("Healthy").Status)
-	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition("MemoryPressure").Status)
-	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition("CPUPressure").Status)
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeMonitored).Status)
+	assert.Equal(t, "Success", target.Status.GetCondition(v1alpha1.ConditionTypeMonitored).Message)
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeHealthy).Status)
+	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeMemoryPressure).Status)
+	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeCPUPressure).Status)
 }
 
 func TestSetMonitoringConditionHelperMissingReplicasAndPressure(t *testing.T) {
@@ -90,9 +90,9 @@ func TestSetMonitoringConditionHelperMissingReplicasAndPressure(t *testing.T) {
 
 	setMonitoringCondition(src, target, pods)
 
-	assert.Equal(t, "1 out of 3 pods available", target.Status.GetCondition("Monitored").Message)
-	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition("MemoryPressure").Status)
-	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition("CPUPressure").Status)
+	assert.Equal(t, "1 out of 3 pods available", target.Status.GetCondition(v1alpha1.ConditionTypeMonitored).Message)
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeMemoryPressure).Status)
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeCPUPressure).Status)
 }
 
 func TestSetMonitoringConditionHelperPodNotReady(t *testing.T) {
@@ -101,6 +101,6 @@ func TestSetMonitoringConditionHelperPodNotReady(t *testing.T) {
 
 	setMonitoringCondition(&v1alpha1.CamelMonitor{}, target, pods)
 
-	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition("Monitored").Status)
-	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition("Healthy").Status)
+	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeMonitored).Status)
+	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeHealthy).Status)
 }

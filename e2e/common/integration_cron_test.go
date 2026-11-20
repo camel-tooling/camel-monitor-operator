@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	. "github.com/camel-tooling/camel-monitor-operator/e2e/support"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -55,12 +56,12 @@ func TestVerifyCamelKIntegrationCron(t *testing.T) {
 				MatchFields(IgnoreExtras, Fields{
 					"Conditions": ContainElements(
 						MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal("Monitored"),
+							"Type":   Equal(v1alpha1.ConditionTypeMonitored),
 							"Status": Equal(metav1.ConditionTrue),
 							"Reason": Equal("MonitoringComplete"),
 						}),
 						MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal("Healthy"),
+							"Type":   Equal(v1alpha1.ConditionTypeHealthy),
 							"Status": Equal(metav1.ConditionTrue),
 							"Reason": Equal("HealthCheckCompleted"),
 						}),
