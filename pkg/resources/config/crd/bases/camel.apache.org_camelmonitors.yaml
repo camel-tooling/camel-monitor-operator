@@ -63,8 +63,8 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Healthy")].status
       name: Healthy
       type: string
-    - jsonPath: .status.conditions[?(@.type=="Monitored")].status
-      name: Monitored
+    - jsonPath: .status.conditions[?(@.type=="MetricsAvailable")].status
+      name: Metrics Available
       type: string
     - jsonPath: .status.conditions[?(@.type=="MemoryPressure")].status
       name: Memory Pressure

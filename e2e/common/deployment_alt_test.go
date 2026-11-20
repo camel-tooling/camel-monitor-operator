@@ -87,7 +87,7 @@ func testVerifyAltDeployment(t *testing.T, image string, expectedPort string, ex
 						),
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(v1alpha1.ConditionTypeMonitored),
+								"Type":   Equal(v1alpha1.ConditionTypeMetricsAvailable),
 								"Status": Equal(metav1.ConditionTrue),
 							}),
 						),

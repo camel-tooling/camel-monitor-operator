@@ -43,7 +43,7 @@ const (
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`,description="The Camel App Pods"
 // +kubebuilder:printcolumn:name="Exchanges",type=string,JSONPath=`.status.runtimeSummary.exchange.total`,description="Total exchanges"
 // +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="Healthy")].status`
-// +kubebuilder:printcolumn:name="Monitored",type=string,JSONPath=`.status.conditions[?(@.type=="Monitored")].status`
+// +kubebuilder:printcolumn:name="Metrics Available",type=string,JSONPath=`.status.conditions[?(@.type=="MetricsAvailable")].status`
 // +kubebuilder:printcolumn:name="Memory Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="MemoryPressure")].status`
 // +kubebuilder:printcolumn:name="CPU Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="CPUPressure")].status`
 // +kubebuilder:printcolumn:name="Upgrade available",type=string,JSONPath=`.status.conditions[?(@.type=="UpgradeAvailable")].status`

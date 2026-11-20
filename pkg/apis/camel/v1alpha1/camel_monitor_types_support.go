@@ -27,9 +27,9 @@ import (
 // NOTE: the kubebuilder printcolumn markers in camel_monitor_types.go cannot reference these constants,
 // so they must be kept in sync manually if a value is ever changed.
 const (
-	// ConditionTypeMonitored reports whether the application is being monitored. It is rewritten on every
+	// ConditionTypeMetricsAvailable reports whether the application metrics endpoint is available. It is rewritten on every
 	// monitoring cycle, so its LastTransitionTime is also used as the "last time the application was polled" marker.
-	ConditionTypeMonitored = "Monitored"
+	ConditionTypeMetricsAvailable = "MetricsAvailable"
 	// ConditionTypeHealthy reports the health status of the application Pods.
 	ConditionTypeHealthy = "Healthy"
 	// ConditionTypeMemoryPressure reports whether any Pod has JVM memory pressure.
