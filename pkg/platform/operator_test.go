@@ -145,6 +145,27 @@ func TestGetMaxConcurrentReconciles(t *testing.T) {
 	})
 }
 
+func TestGetPollingShufflePercent(t *testing.T) {
+	tests := map[string]struct {
+		value    string
+		expected int
+	}{
+		"env value":                 {"25", 25},
+		"default":                   {"", defaultPollingShufflePercent},
+		"invalid falls back":        {"abc", defaultPollingShufflePercent},
+		"negative is disabled":      {"-5", 0},
+		"above 100 is capped":       {"250", 100},
+		"zero disables the shuffle": {"0", 0},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(PollingShufflePercentEnvVariable, tc.value)
+			assert.Equal(t, tc.expected, GetPollingShufflePercent())
+		})
+	}
+}
+
 func TestGetPollingInterval(t *testing.T) {
 	t.Setenv(CamelMonitorPollIntervalSeconds, "30")
 

@@ -43,6 +43,7 @@ const (
 	clientQPSEnvVariable                  = "CLIENT_QPS"
 	clientBurstEnvVariable                = "CLIENT_BURST"
 	maxConcurrentReconcilesEnvVariable    = "MAX_CONCURRENT_RECONCILES"
+	PollingShufflePercentEnvVariable      = "POLLING_SHUFFLE_PERCENT"
 
 	CamelMonitorLabelSelector = "LABEL_SELECTOR"
 
@@ -61,6 +62,7 @@ const (
 	defaultClientQPS                      float32 = 20
 	defaultClientBurst                    int     = 200
 	defaultMaxConcurrentReconciles        int     = 1
+	defaultPollingShufflePercent          int     = 0
 
 	OperatorLockName = "camel-monitor-lock"
 )
@@ -222,6 +224,15 @@ func GetClientBurst() int {
 // GetMaxConcurrentReconciles returns the max number of concurrent reconciles of the CamelMonitor controller. It fallbacks to default value.
 func GetMaxConcurrentReconciles() int {
 	return getOperatorEnvAsInt(maxConcurrentReconcilesEnvVariable, "max concurrent reconciles", defaultMaxConcurrentReconciles)
+}
+
+// GetPollingShufflePercent returns the percentage (0-100) of the polling interval used to spread the first monitoring of
+// the CamelMonitors without any status when the operator starts, so that the load is balanced since the very beginning.
+// Zero (default) disables the shuffle. Invalid values fallback to default and values out of range are adjusted to it.
+func GetPollingShufflePercent() int {
+	percent := getOperatorEnvAsInt(PollingShufflePercentEnvVariable, "polling shuffle percent", defaultPollingShufflePercent)
+
+	return min(max(percent, 0), 100)
 }
 
 // getPollingIntervalSeconds returns the polling interval (in seconds) for the operator. It fallbacks to default value.

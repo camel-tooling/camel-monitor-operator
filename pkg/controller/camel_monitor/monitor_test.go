@@ -360,3 +360,49 @@ func TestCheckVersionUpgradeSpringBootIsTrue(t *testing.T) {
 	require.Len(t, status.Conditions, 1)
 	assert.Equal(t, metav1.ConditionTrue, status.Conditions[0].Status)
 }
+
+func TestRemoveDisabledFeaturesConditions(t *testing.T) {
+	newStatus := func() *v1alpha1.CamelMonitorStatus {
+		status := &v1alpha1.CamelMonitorStatus{}
+		for _, condType := range []string{
+			v1alpha1.ConditionTypeUpgradeAvailable,
+			v1alpha1.ConditionTypePrometheusPodMonitor,
+			v1alpha1.ConditionTypeGrafanaDashboard,
+		} {
+			status.AddCondition(metav1.Condition{Type: condType, Status: metav1.ConditionTrue})
+		}
+
+		return status
+	}
+
+	t.Run("disabled features are removed", func(t *testing.T) {
+		t.Setenv("CHECK_VERSION_UPGRADE", "false")
+		t.Setenv("CREATE_PROMETHEUS_POD_MONITOR", "false")
+		t.Setenv("CREATE_GRAFANA_DASHBOARD", "false")
+
+		status := newStatus()
+		(&monitorAction{hasPrometheusCRDs: true, hasGrafanaCRDs: true}).removeDisabledFeaturesConditions(status)
+		assert.Empty(t, status.Conditions)
+	})
+
+	t.Run("missing CRDs are removed", func(t *testing.T) {
+		t.Setenv("CHECK_VERSION_UPGRADE", "true")
+		t.Setenv("CREATE_PROMETHEUS_POD_MONITOR", "true")
+		t.Setenv("CREATE_GRAFANA_DASHBOARD", "true")
+
+		status := newStatus()
+		(&monitorAction{}).removeDisabledFeaturesConditions(status)
+		assert.Len(t, status.Conditions, 1)
+		assert.NotNil(t, status.GetCondition(v1alpha1.ConditionTypeUpgradeAvailable))
+	})
+
+	t.Run("enabled features are kept", func(t *testing.T) {
+		t.Setenv("CHECK_VERSION_UPGRADE", "true")
+		t.Setenv("CREATE_PROMETHEUS_POD_MONITOR", "true")
+		t.Setenv("CREATE_GRAFANA_DASHBOARD", "true")
+
+		status := newStatus()
+		(&monitorAction{hasPrometheusCRDs: true, hasGrafanaCRDs: true}).removeDisabledFeaturesConditions(status)
+		assert.Len(t, status.Conditions, 3)
+	})
+}

@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	v1alpha1 "github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/client"
@@ -119,11 +118,10 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 		}
 
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               v1alpha1.ConditionTypeHealthy,
-			Status:             healthCond,
-			LastTransitionTime: metav1.NewTime(time.Now()),
-			Reason:             "HealthCheckCompleted",
-			Message:            info,
+			Type:    v1alpha1.ConditionTypeHealthy,
+			Status:  healthCond,
+			Reason:  "HealthCheckCompleted",
+			Message: info,
 		})
 
 		schedulingMessage := ""
@@ -141,20 +139,21 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 		}
 
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               v1alpha1.ConditionTypeCronJobExecution,
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.NewTime(time.Now()),
-			Reason:             "Scheduling",
-			Message:            schedulingMessage,
+			Type:    v1alpha1.ConditionTypeCronJobExecution,
+			Status:  metav1.ConditionTrue,
+			Reason:  "Scheduling",
+			Message: schedulingMessage,
 		})
+	} else {
+		// These are calculated from the Pods
+		targetApp.Status.RemoveCondition(v1alpha1.ConditionTypeHealthy, v1alpha1.ConditionTypeCronJobExecution)
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               v1alpha1.ConditionTypeMonitored,
-		Status:             monitorCondition,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		Reason:             "MonitoringComplete",
-		Message:            monitorMessage,
+		Type:    v1alpha1.ConditionTypeMonitored,
+		Status:  monitorCondition,
+		Reason:  "MonitoringComplete",
+		Message: monitorMessage,
 	})
 }
 

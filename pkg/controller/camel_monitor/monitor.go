@@ -84,8 +84,11 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	obsConf := synthetic.GetAppObservabilityConf(targetApp)
 	// Important: we keep any previous existing info, so that, in case of scaling to 0
 	// we maintain the latest scraped information available.
+	// The conditions are kept as well: they are updated in place (see AddCondition), so that their transition time
+	// changes only when their status changes. Those that do not apply in this cycle are removed (see RemoveCondition).
 	targetApp.Status = v1alpha1.CamelMonitorStatus{
 		RuntimeSummary: cmon.Status.RuntimeSummary,
+		Conditions:     targetApp.Status.Conditions,
 	}
 
 	deployImage := nonManagedApp.GetAppImage()
@@ -118,14 +121,14 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 			targetApp.Status.SuccessRate = getSLIExchangeSuccessRate(*appRuntimeInfo, *targetRuntimeSummary, &pollingInterval, sliErrPerc, sliWarnPerc)
 		}
 
-		if action.hasPrometheusCRDs && platform.GetCreatePrometheusPodMonitor() == "true" {
+		if action.prometheusPodMonitorEnabled() {
 			err := addPrometheusPodMonitor(ctx, action.client, targetApp, nonManagedApp.GetMatchLabelsSelector())
 			if err != nil {
 				return targetApp, err
 			}
 		}
 
-		if action.hasGrafanaCRDs && platform.GetCreateGrafanaDashboard() == "true" {
+		if action.grafanaDashboardEnabled() {
 			err := addGrafanaDashboard(ctx, action.client, targetApp, nonManagedApp.GetResourcesLimits())
 			if err != nil {
 				return targetApp, err
@@ -133,9 +136,42 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 		}
 	}
 
+	// The conditions of the optional features are removed only if the feature is disabled. They are not removed when
+	// there is no Pod, as the application can scale up at any point and they are evaluated again.
+	action.removeDisabledFeaturesConditions(&targetApp.Status)
+
 	nonManagedApp.SetMonitoringCondition(cmon, targetApp, pods)
 
+	targetApp.Status.LastMonitoredTime = new(metav1.Now())
+
 	return targetApp, nil
+}
+
+func (action *monitorAction) prometheusPodMonitorEnabled() bool {
+	return action.hasPrometheusCRDs && platform.GetCreatePrometheusPodMonitor() == "true"
+}
+
+func (action *monitorAction) grafanaDashboardEnabled() bool {
+	return action.hasGrafanaCRDs && platform.GetCreateGrafanaDashboard() == "true"
+}
+
+func versionUpgradeCheckEnabled() bool {
+	return platform.GetCheckVersionUpgrade() == "true"
+}
+
+// removeDisabledFeaturesConditions removes the conditions of the optional features which are not enabled.
+func (action *monitorAction) removeDisabledFeaturesConditions(status *v1alpha1.CamelMonitorStatus) {
+	if !versionUpgradeCheckEnabled() {
+		status.RemoveCondition(v1alpha1.ConditionTypeUpgradeAvailable)
+	}
+
+	if !action.prometheusPodMonitorEnabled() {
+		status.RemoveCondition(v1alpha1.ConditionTypePrometheusPodMonitor)
+	}
+
+	if !action.grafanaDashboardEnabled() {
+		status.RemoveCondition(v1alpha1.ConditionTypeGrafanaDashboard)
+	}
 }
 
 func lookupObject(ctx context.Context, c client.Client, kind, ns string, name string) (*ctrl.Object, error) {
@@ -212,7 +248,7 @@ func getRuntimeSummary(pods []v1alpha1.PodInfo) *v1alpha1.RuntimeInfo {
 }
 
 func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo, targetAppStatus *v1alpha1.CamelMonitorStatus) {
-	if runtimeInfo.RuntimeProvider == "" || platform.GetCheckVersionUpgrade() != "true" {
+	if runtimeInfo.RuntimeProvider == "" || !versionUpgradeCheckEnabled() {
 		return
 	}
 
@@ -257,11 +293,10 @@ func checkVersionUpgrade(ctx context.Context, runtimeInfo *v1alpha1.RuntimeInfo,
 	}
 
 	targetAppStatus.AddCondition(metav1.Condition{
-		Type:               conditionType,
-		Status:             statusCondition,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		Reason:             reason,
-		Message:            message,
+		Type:    conditionType,
+		Status:  statusCondition,
+		Reason:  reason,
+		Message: message,
 	})
 }
 
