@@ -89,7 +89,7 @@ func TestMonitorActionDeploymentCronJobWaiting(t *testing.T) {
 	assert.Equal(t, ptr.To(int32(0)), target.Status.Replicas)
 	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionFalse, monitored.Status)
 	assert.Equal(t, "No scheduled job has run yet", monitored.Message)
@@ -147,7 +147,7 @@ func TestMonitorActionDeploymentCronJobActive(t *testing.T) {
 	assert.Equal(t, v1alpha1.CamelMonitorPhaseRunning, target.Status.Phase)
 	assert.Len(t, target.Status.Pods, 2)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionTrue, monitored.Status)
 	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)
@@ -206,7 +206,7 @@ func TestMonitorActionDeploymentCronJobFailed(t *testing.T) {
 	assert.Equal(t, v1alpha1.CamelMonitorPhaseRunning, target.Status.Phase)
 	assert.Len(t, target.Status.Pods, 2)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionTrue, monitored.Status)
 	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)

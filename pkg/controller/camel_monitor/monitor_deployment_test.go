@@ -93,7 +93,7 @@ func TestMonitorActionDeploymentScaledTo0(t *testing.T) {
 	assert.Equal(t, "my-camel-image", target.Status.Image)
 	assert.Equal(t, ptr.To(int32(0)), target.Status.Replicas)
 	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
 	assert.Equal(t, "No active Pod available", monitored.Message)
@@ -148,7 +148,7 @@ func TestMonitorActionDeploymentWithStatusScaledTo0(t *testing.T) {
 	assert.Equal(t, "my-camel-image", target.Status.Image)
 	assert.Equal(t, ptr.To(int32(0)), target.Status.Replicas)
 	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
 	assert.Equal(t, "No active Pod available", monitored.Message)
@@ -217,7 +217,7 @@ func TestMonitorActionDeploymentNonActivePods(t *testing.T) {
 	assert.Contains(t, target.Status.Pods, v1alpha1.PodInfo{Name: "my-pod-2", Status: "Pending"})
 	assert.Contains(t, target.Status.Pods, v1alpha1.PodInfo{Name: "my-pod-3", Status: "Failed"})
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionFalse, monitored.Status)
 	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)
@@ -289,7 +289,7 @@ func TestMonitorActionDeploymentPodsRunning(t *testing.T) {
 	assert.Len(t, target.Status.Pods, 1)
 	assert.True(t, target.Status.Pods[0].Ready)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionTrue, monitored.Status)
 	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)
@@ -355,7 +355,7 @@ func TestMonitorActionDeploymentNoMetrics(t *testing.T) {
 	assert.Equal(t, v1alpha1.CamelMonitorPhaseRunning, target.Status.Phase)
 	assert.Len(t, target.Status.Pods, 1)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionFalse, monitored.Status)
 	assert.Equal(t, "MonitoringError", monitored.Reason)
@@ -426,7 +426,7 @@ func TestMonitorActionDeploymentNoMetricsScaledTo0(t *testing.T) {
 	// Must be paused even when status replicas is not yet 0 and pod has no metrics
 	assert.Equal(t, v1alpha1.CamelMonitorPhasePaused, target.Status.Phase)
 
-	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	assert.NotNil(t, monitored)
 	assert.Equal(t, metav1.ConditionUnknown, monitored.Status)
 	assert.Equal(t, "No active Pod available", monitored.Message)

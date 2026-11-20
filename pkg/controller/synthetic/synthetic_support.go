@@ -576,7 +576,7 @@ func parseHealthStatus(reader io.Reader) (string, error) {
 func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alpha1.PodInfo) {
 	if targetApp.Status.Phase == v1alpha1.CamelMonitorPhasePaused || len(pods) == 0 {
 		targetApp.Status.AddCondition(metav1.Condition{
-			Type:               v1alpha1.ConditionTypeMonitored,
+			Type:               v1alpha1.ConditionTypeMetricsAvailable,
 			Status:             metav1.ConditionUnknown,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 			Reason:             "MonitoringComplete",
@@ -602,7 +602,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:               v1alpha1.ConditionTypeMonitored,
+		Type:               v1alpha1.ConditionTypeMetricsAvailable,
 		Status:             monitoredCondition,
 		LastTransitionTime: metav1.NewTime(time.Now()),
 		Reason:             monitoredReason,
