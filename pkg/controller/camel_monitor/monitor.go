@@ -71,6 +71,11 @@ func (action *monitorAction) Handle(ctx context.Context, cmon *v1alpha1.CamelMon
 	}
 
 	if objOwner == nil {
+		deleteErr := action.client.Delete(ctx, cmon)
+		if deleteErr != nil && !k8serrors.IsNotFound(deleteErr) {
+			return nil, deleteErr
+		}
+
 		return nil, fmt.Errorf("baking deployment object does not exist for App %s/%s", cmon.Namespace, cmon.Name)
 	}
 
