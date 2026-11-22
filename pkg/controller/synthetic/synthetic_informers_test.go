@@ -358,3 +358,127 @@ func TestOnDeleteNotFound(t *testing.T) {
 	_, err = getSyntheticCamelMonitor(context.TODO(), fakeClient, "default", "missing-app")
 	require.Error(t, err)
 }
+
+func TestManageSyntheticCamelMonitorsUnlabelDeletesMonitor(t *testing.T) {
+	ctx := context.TODO()
+	fakeClient, err := internal.NewFakeClient()
+	require.NoError(t, err)
+	informers := &informertest.FakeInformers{}
+
+	require.NoError(t, ManageSyntheticCamelMonitors(ctx, fakeClient, informers))
+	deployInformer := fakeInformerFor(t, informers, &appsv1.Deployment{})
+
+	// Add deployment with monitor label
+	deploy := newMonitoredDeployment("no-camel-svc", "my-app")
+	deployInformer.Add(deploy)
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "my-app")
+	require.NoError(t, err)
+
+	// Simulate unlabel: the label is removed from the deployment
+	unlabeled := deploy.DeepCopy()
+	delete(unlabeled.Labels, v1alpha1.MonitorLabel)
+
+	// Update event where new object has no label
+	deployInformer.Update(deploy, unlabeled)
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "my-app")
+	require.Error(t, err)
+
+	cmons := &v1alpha1.CamelMonitorList{}
+	require.NoError(t, fakeClient.List(ctx, cmons, ctrl.InNamespace("default")))
+	assert.Empty(t, cmons.Items)
+}
+
+type captureInformer struct {
+	cache.Informer
+	handler clientgocache.ResourceEventHandler
+}
+
+func (ci *captureInformer) AddEventHandler(h clientgocache.ResourceEventHandler) (clientgocache.ResourceEventHandlerRegistration, error) {
+	ci.handler = h
+	return nil, nil
+}
+
+type testCaptureCache struct {
+	cache.Cache
+	informer cache.Informer
+}
+
+func (tc *testCaptureCache) GetInformer(ctx context.Context, obj ctrl.Object, opts ...cache.InformerGetOption) (cache.Informer, error) {
+	return tc.informer, nil
+}
+
+func TestManageSyntheticCamelMonitorsDeleteTombstone(t *testing.T) {
+	ctx := context.TODO()
+	fakeClient, err := internal.NewFakeClient()
+	require.NoError(t, err)
+
+	capInformer := &captureInformer{}
+	c := &testCaptureCache{informer: capInformer}
+
+	require.NoError(t, ManageSyntheticCamelMonitors(ctx, fakeClient, c))
+	require.NotNil(t, capInformer.handler)
+
+	deploy := newMonitoredDeployment("no-camel-svc", "my-app")
+	capInformer.handler.OnAdd(deploy, false)
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "my-app")
+	require.NoError(t, err)
+
+	// Tombstone with non-ctrl.Object inside should be ignored gracefully
+	capInformer.handler.OnDelete(clientgocache.DeletedFinalStateUnknown{
+		Key: "default/invalid",
+		Obj: "not-a-ctrl-object",
+	})
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "my-app")
+	require.NoError(t, err)
+
+	// In Kubernetes, filtered cache delete events can be delivered as DeletedFinalStateUnknown tombstones
+	// where the object inside might already have had its label removed
+	unlabeled := deploy.DeepCopy()
+	delete(unlabeled.Labels, v1alpha1.MonitorLabel)
+	tombstone := clientgocache.DeletedFinalStateUnknown{
+		Key: "default/no-camel-svc",
+		Obj: unlabeled,
+	}
+
+	capInformer.handler.OnDelete(tombstone)
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "my-app")
+	require.Error(t, err)
+
+	cmons := &v1alpha1.CamelMonitorList{}
+	require.NoError(t, fakeClient.List(ctx, cmons, ctrl.InNamespace("default")))
+	assert.Empty(t, cmons.Items)
+}
+
+func TestManageSyntheticCamelMonitorsSuffixedRevisionDeleted(t *testing.T) {
+	ctx := context.TODO()
+	fakeClient, err := internal.NewFakeClient()
+	require.NoError(t, err)
+	informers := &informertest.FakeInformers{}
+
+	require.NoError(t, ManageSyntheticCamelMonitors(ctx, fakeClient, informers))
+	deployInformer := fakeInformerFor(t, informers, &appsv1.Deployment{})
+
+	// Two deployments using the same app name: second one gets a suffixed revision
+	deploy1 := newMonitoredDeployment("deploy-1", "shared-app")
+	deployInformer.Add(deploy1)
+	deploy2 := newMonitoredDeployment("deploy-2", "shared-app")
+	deployInformer.Add(deploy2)
+
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "shared-app")
+	require.NoError(t, err)
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "shared-app-deploy-2")
+	require.NoError(t, err)
+
+	// Unlabel deploy-2
+	unlabeled2 := deploy2.DeepCopy()
+	delete(unlabeled2.Labels, v1alpha1.MonitorLabel)
+	deployInformer.Delete(unlabeled2)
+
+	// Suffixed monitor for deploy-2 must be deleted
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "shared-app-deploy-2")
+	require.Error(t, err)
+
+	// Monitor for deploy-1 must still exist
+	_, err = getSyntheticCamelMonitor(ctx, fakeClient, "default", "shared-app")
+	require.NoError(t, err)
+}

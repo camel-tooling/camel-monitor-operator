@@ -28,8 +28,10 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestMonitorActionBakingCronjobMissing(t *testing.T) {
@@ -51,6 +53,10 @@ func TestMonitorActionBakingCronjobMissing(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, "baking deployment object does not exist for App default/test-app", err.Error())
+
+	deleted := &v1alpha1.CamelMonitor{}
+	err = fakeClient.Get(context.TODO(), ctrl.ObjectKey{Namespace: "default", Name: "test-app"}, deleted)
+	require.True(t, k8serrors.IsNotFound(err))
 }
 
 func TestMonitorActionDeploymentCronJobWaiting(t *testing.T) {

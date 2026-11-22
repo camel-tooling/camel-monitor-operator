@@ -81,10 +81,8 @@ func ManageSyntheticCamelMonitors(ctx context.Context, c client.Client, cache ca
 				onUpdate(ctx, c, oldCtrlObj, newCtrlObj)
 			},
 			DeleteFunc: func(obj any) {
-				ctrlObj, ok := obj.(ctrl.Object)
+				ctrlObj, ok := extractCtrlObjectOnDelete(obj)
 				if !ok {
-					log.Errorf(fmt.Errorf("type assertion failed: %v", obj), "Failed to retrieve Object on delete event")
-
 					return
 				}
 
@@ -99,9 +97,36 @@ func ManageSyntheticCamelMonitors(ctx context.Context, c client.Client, cache ca
 	return nil
 }
 
+func extractCtrlObjectOnDelete(obj any) (ctrl.Object, bool) {
+	ctrlObj, ok := obj.(ctrl.Object)
+	if ok {
+		return ctrlObj, true
+	}
+
+	tombstone, ok := obj.(clientgocache.DeletedFinalStateUnknown)
+	if !ok {
+		log.Errorf(fmt.Errorf("type assertion failed: %v", obj), "Failed to retrieve Object on delete event")
+
+		return nil, false
+	}
+
+	ctrlObj, ok = tombstone.Obj.(ctrl.Object)
+	if !ok {
+		log.Errorf(fmt.Errorf("tombstone contained object is not a ctrl.Object: %v", tombstone.Obj), "Failed to retrieve Object on delete event")
+
+		return nil, false
+	}
+
+	return ctrlObj, true
+}
+
 func onAdd(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
 	log.Debugf("Detected a new resource named %s in namespace %s", ctrlObj.GetName(), ctrlObj.GetNamespace())
+
 	appName := ctrlObj.GetLabels()[platform.GetMonitorLabelSelector()]
+	if appName == "" {
+		return
+	}
 
 	existingApp, err := getSyntheticCamelMonitor(ctx, c, ctrlObj.GetNamespace(), appName)
 	switch {
@@ -131,7 +156,10 @@ func onUpdate(ctx context.Context, c client.Client, oldObj, newObj ctrl.Object) 
 	log.Infof("Detected a change of %s label value on resource %s in namespace %s: %s -> %s",
 		selector, newObj.GetName(), newObj.GetNamespace(), oldName, newName)
 	onDelete(ctx, c, oldObj)
-	onAdd(ctx, c, newObj)
+
+	if newName != "" {
+		onAdd(ctx, c, newObj)
+	}
 }
 
 func createMonitor(ctx context.Context, c client.Client, ctrlObj ctrl.Object, appName, suffix string) {
@@ -156,7 +184,15 @@ func createMonitor(ctx context.Context, c client.Client, ctrlObj ctrl.Object, ap
 }
 
 func onDelete(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
+	if deleteImportedCamelMonitors(ctx, c, ctrlObj) {
+		return
+	}
+
 	appName := ctrlObj.GetLabels()[platform.GetMonitorLabelSelector()]
+	if appName == "" {
+		return
+	}
+
 	// Importing label removed
 	err := deleteSyntheticCamelMonitor(ctx, c, ctrlObj.GetNamespace(), appName)
 	if err != nil {
@@ -166,6 +202,61 @@ func onDelete(ctx context.Context, c client.Client, ctrlObj ctrl.Object) {
 	}
 
 	log.Infof("Deleted Camel Monitor %s", appName)
+}
+
+func deleteImportedCamelMonitors(ctx context.Context, c client.Client, ctrlObj ctrl.Object) bool {
+	var cmons v1alpha1.CamelMonitorList
+
+	err := c.List(ctx, &cmons, ctrl.InNamespace(ctrlObj.GetNamespace()))
+	if err != nil {
+		return false
+	}
+
+	targetKind := getObjectKind(ctrlObj)
+	deleted := false
+
+	for i := range cmons.Items {
+		cmon := &cmons.Items[i]
+		if !isImportedFromObject(cmon, ctrlObj.GetName(), targetKind) {
+			continue
+		}
+
+		deleted = true
+
+		deleteSingleCamelMonitor(ctx, c, cmon)
+	}
+
+	return deleted
+}
+
+func isImportedFromObject(cmon *v1alpha1.CamelMonitor, name, kind string) bool {
+	if cmon.Annotations[v1alpha1.MonitorImportedNameLabel] != name {
+		return false
+	}
+
+	return cmon.Annotations[v1alpha1.MonitorImportedKindLabel] == kind
+}
+
+func deleteSingleCamelMonitor(ctx context.Context, c client.Client, cmon *v1alpha1.CamelMonitor) {
+	err := c.Delete(ctx, cmon)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		log.Errorf(err, "Some error happened while deleting a Camel Monitor %s", cmon.Name)
+
+		return
+	}
+
+	log.Infof("Deleted Camel Monitor %s", cmon.Name)
+}
+
+func getObjectKind(obj ctrl.Object) string {
+	switch obj.(type) {
+	case *appsv1.Deployment:
+		return "Deployment"
+	case *batchv1.CronJob:
+		return "CronJob"
+	default:
+		return obj.GetObjectKind().GroupVersionKind().Kind
+	}
 }
 
 func getInformers(ctx context.Context, cl client.Client, c cache.Cache) ([]cache.Informer, error) {
