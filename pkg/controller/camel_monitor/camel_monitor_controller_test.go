@@ -108,7 +108,7 @@ func TestReconcileApp_ConditionTransitionTimeIsKept(t *testing.T) {
 		},
 	}
 	app.Status.AddCondition(metav1.Condition{
-		Type:               v1alpha1.ConditionTypeMonitored,
+		Type:               v1alpha1.ConditionTypeMetricsAvailable,
 		Status:             metav1.ConditionUnknown,
 		LastTransitionTime: oldTime,
 		Reason:             "MonitoringComplete",
@@ -150,7 +150,7 @@ func TestReconcileApp_ConditionTransitionTimeIsKept(t *testing.T) {
 	require.NoError(t, fakeClient.Get(context.TODO(), req.NamespacedName, &got))
 
 	// No Pod available: Monitored stays Unknown, same status, same transition time
-	monitored := got.Status.GetCondition(v1alpha1.ConditionTypeMonitored)
+	monitored := got.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable)
 	require.NotNil(t, monitored)
 	require.Equal(t, metav1.ConditionUnknown, monitored.Status)
 	require.True(t, oldTime.Equal(&monitored.LastTransitionTime))

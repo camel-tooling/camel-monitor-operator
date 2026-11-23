@@ -29,11 +29,11 @@ func TestAddCondition(t *testing.T) {
 	old := metav1.NewTime(time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
 
 	status := CamelMonitorStatus{}
-	status.AddCondition(metav1.Condition{Type: ConditionTypeMonitored, Status: metav1.ConditionTrue, LastTransitionTime: old, Message: "old"})
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMetricsAvailable, Status: metav1.ConditionTrue, LastTransitionTime: old, Message: "old"})
 	status.AddCondition(metav1.Condition{Type: ConditionTypeHealthy, Status: metav1.ConditionTrue, LastTransitionTime: old})
 
 	// same status: transition time is kept, the rest of the condition is the new one
-	status.AddCondition(metav1.Condition{Type: ConditionTypeMonitored, Status: metav1.ConditionTrue, Message: "new"})
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMetricsAvailable, Status: metav1.ConditionTrue, Message: "new"})
 	// status changed: transition time is updated
 	status.AddCondition(metav1.Condition{Type: ConditionTypeHealthy, Status: metav1.ConditionFalse})
 	// new condition: transition time is set
@@ -41,7 +41,7 @@ func TestAddCondition(t *testing.T) {
 
 	assert.Len(t, status.Conditions, 3, "conditions of the same type must be replaced, not appended")
 
-	monitored := status.GetCondition(ConditionTypeMonitored)
+	monitored := status.GetCondition(ConditionTypeMetricsAvailable)
 	assert.Equal(t, old, monitored.LastTransitionTime)
 	assert.Equal(t, "new", monitored.Message)
 	assert.True(t, status.GetCondition(ConditionTypeHealthy).LastTransitionTime.After(old.Time))
@@ -50,14 +50,14 @@ func TestAddCondition(t *testing.T) {
 
 func TestRemoveCondition(t *testing.T) {
 	status := CamelMonitorStatus{}
-	status.AddCondition(metav1.Condition{Type: ConditionTypeMonitored, Status: metav1.ConditionTrue})
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMetricsAvailable, Status: metav1.ConditionTrue})
 	status.AddCondition(metav1.Condition{Type: ConditionTypeCPUPressure, Status: metav1.ConditionFalse})
 	status.AddCondition(metav1.Condition{Type: ConditionTypeMemoryPressure, Status: metav1.ConditionFalse})
 
 	status.RemoveCondition(ConditionTypeCPUPressure, ConditionTypeMemoryPressure, ConditionTypeGrafanaDashboard)
 
 	assert.Len(t, status.Conditions, 1)
-	assert.NotNil(t, status.GetCondition(ConditionTypeMonitored))
+	assert.NotNil(t, status.GetCondition(ConditionTypeMetricsAvailable))
 	assert.Nil(t, status.GetCondition(ConditionTypeCPUPressure))
 	assert.Nil(t, status.GetCondition(ConditionTypeMemoryPressure))
 }
