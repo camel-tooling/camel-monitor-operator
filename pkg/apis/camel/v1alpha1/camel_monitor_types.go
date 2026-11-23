@@ -83,6 +83,9 @@ type CamelMonitorStatus struct {
 	SuccessRate *SLIExchangeSuccessRate `json:"sliExchangeSuccessRate,omitempty"`
 	// The conditions catching more detailed information
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// The last time the application was monitored. It is used to schedule the next monitoring cycle,
+	// also after an operator restart.
+	LastMonitoredTime *metav1.Time `json:"lastMonitoredTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

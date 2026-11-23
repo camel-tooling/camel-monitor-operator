@@ -171,6 +171,13 @@ spec:
               image:
                 description: the image used to run the application
                 type: string
+              lastMonitoredTime:
+                description: |-
+                  The last time the application was monitored. It is used to schedule the next monitoring cycle,
+                  also after an operator restart (the conditions transition time cannot be used, as it changes only
+                  when the condition status changes).
+                format: date-time
+                type: string
               phase:
                 description: the actual phase
                 type: string

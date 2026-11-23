@@ -20,6 +20,7 @@ package v1alpha1
 import (
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -82,12 +83,21 @@ func NewCamelMonitor(namespace string, name string) CamelMonitor {
 	}
 }
 
+// AddCondition adds the condition, or updates the existing one of the same type. As per Kubernetes API conventions,
+// LastTransitionTime is the last time the condition changed from one status to another, so it is set only when the
+// condition is new or its Status changed (the given LastTransitionTime is used if set, otherwise now). If the Status
+// is the same, the previous LastTransitionTime is kept and only Reason and Message are updated.
 func (cmonStatus *CamelMonitorStatus) AddCondition(condition metav1.Condition) {
-	if cmonStatus.Conditions == nil {
-		cmonStatus.Conditions = []metav1.Condition{}
-	}
+	meta.SetStatusCondition(&cmonStatus.Conditions, condition)
+}
 
-	cmonStatus.Conditions = append(cmonStatus.Conditions, condition)
+// RemoveCondition removes the conditions of the given types. Conditions are kept between monitoring cycles, so
+// those that do not apply in the current cycle (for instance, a feature that is not enabled or a Pod related
+// condition when there is no Pod available) must be explicitly removed in order not to report a stale value.
+func (cmonStatus *CamelMonitorStatus) RemoveCondition(condTypes ...string) {
+	for _, condType := range condTypes {
+		meta.RemoveStatusCondition(&cmonStatus.Conditions, condType)
+	}
 }
 
 // ImportCamelAnnotations copies all camel annotations from the deployment to the App.

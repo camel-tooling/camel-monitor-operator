@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	camelv1alpha1 "github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
@@ -43,6 +44,9 @@ type CamelMonitorStatusApplyConfiguration struct {
 	SuccessRate *SLIExchangeSuccessRateApplyConfiguration `json:"sliExchangeSuccessRate,omitempty"`
 	// The conditions catching more detailed information
 	Conditions []v1.ConditionApplyConfiguration `json:"conditions,omitempty"`
+	// The last time the application was monitored. It is used to schedule the next monitoring cycle,
+	// also after an operator restart.
+	LastMonitoredTime *metav1.Time `json:"lastMonitoredTime,omitempty"`
 }
 
 // CamelMonitorStatusApplyConfiguration constructs a declarative configuration of the CamelMonitorStatus type for use with
@@ -114,5 +118,13 @@ func (b *CamelMonitorStatusApplyConfiguration) WithConditions(values ...*v1.Cond
 		}
 		b.Conditions = append(b.Conditions, *values[i])
 	}
+	return b
+}
+
+// WithLastMonitoredTime sets the LastMonitoredTime field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the LastMonitoredTime field is set to the value of the last call.
+func (b *CamelMonitorStatusApplyConfiguration) WithLastMonitoredTime(value metav1.Time) *CamelMonitorStatusApplyConfiguration {
+	b.LastMonitoredTime = &value
 	return b
 }
