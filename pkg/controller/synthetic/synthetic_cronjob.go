@@ -150,7 +150,7 @@ func (app *nonManagedCamelCronjob) SetMonitoringCondition(srcApp, targetApp *v1a
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
-		Type:    v1alpha1.ConditionTypeMonitored,
+		Type:    v1alpha1.ConditionTypeMetricsAvailable,
 		Status:  monitorCondition,
 		Reason:  "MonitoringComplete",
 		Message: monitorMessage,

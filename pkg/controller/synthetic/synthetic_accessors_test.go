@@ -146,6 +146,6 @@ func TestDeploymentSetMonitoringCondition(t *testing.T) {
 
 	app.SetMonitoringCondition(&v1alpha1.CamelMonitor{}, target, nil)
 
-	require.NotNil(t, target.Status.GetCondition(v1alpha1.ConditionTypeMonitored))
-	assert.Equal(t, metav1.ConditionUnknown, target.Status.GetCondition(v1alpha1.ConditionTypeMonitored).Status)
+	require.NotNil(t, target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable))
+	assert.Equal(t, metav1.ConditionUnknown, target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable).Status)
 }

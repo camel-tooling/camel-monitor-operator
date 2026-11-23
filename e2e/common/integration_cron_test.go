@@ -56,7 +56,7 @@ func TestVerifyCamelKIntegrationCron(t *testing.T) {
 				MatchFields(IgnoreExtras, Fields{
 					"Conditions": ContainElements(
 						MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(v1alpha1.ConditionTypeMonitored),
+							"Type":   Equal(v1alpha1.ConditionTypeMetricsAvailable),
 							"Status": Equal(metav1.ConditionTrue),
 							"Reason": Equal("MonitoringComplete"),
 						}),

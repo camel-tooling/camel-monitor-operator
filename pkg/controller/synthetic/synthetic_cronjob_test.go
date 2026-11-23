@@ -141,7 +141,7 @@ func TestSetMonitoringCondition_NoPods(t *testing.T) {
 	adapter.SetMonitoringCondition(nil, target, nil)
 
 	require.Len(t, target.Status.Conditions, 1)
-	require.Equal(t, v1alpha1.ConditionTypeMonitored, target.Status.Conditions[0].Type)
+	require.Equal(t, v1alpha1.ConditionTypeMetricsAvailable, target.Status.Conditions[0].Type)
 	require.Equal(t, metav1.ConditionFalse, target.Status.Conditions[0].Status)
 }
 
