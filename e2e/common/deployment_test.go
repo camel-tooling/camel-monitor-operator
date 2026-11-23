@@ -158,7 +158,7 @@ func TestVerifyDeploymentNoMetrics(t *testing.T) {
 					"Conditions": And(
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":    Equal(v1alpha1.ConditionTypeMonitored),
+								"Type":    Equal(v1alpha1.ConditionTypeMetricsAvailable),
 								"Status":  Equal(metav1.ConditionFalse),
 								"Reason":  Equal("MonitoringError"),
 								"Message": Equal("Could not scrape health or metrics endpoints. See specific Pods status messages"),
@@ -193,7 +193,7 @@ func TestVerifyDeploymentNoMetrics(t *testing.T) {
 					"Conditions": And(
 						ContainElement(
 							MatchFields(IgnoreExtras, Fields{
-								"Type":    Equal(v1alpha1.ConditionTypeMonitored),
+								"Type":    Equal(v1alpha1.ConditionTypeMetricsAvailable),
 								"Status":  Equal(metav1.ConditionUnknown),
 								"Message": Equal("No active Pod available"),
 							}),
