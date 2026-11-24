@@ -42,10 +42,17 @@ func TestNginxConfig(t *testing.T) {
 	assert.Contains(t, cfg, "ssl_certificate     /var/cert/tls.crt")
 	assert.Contains(t, cfg, "ssl_certificate_key /var/cert/tls.key")
 	assert.Contains(t, cfg, "server_tokens       off")
+	assert.Contains(t, cfg, "ssl_protocols       TLSv1.2 TLSv1.3")
 	assert.Contains(t, cfg, `X-Frame-Options "DENY"`)
 	assert.Contains(t, cfg, `X-Content-Type-Options "nosniff"`)
 	assert.Contains(t, cfg, `Strict-Transport-Security "max-age=31536000; includeSubDomains"`)
 	assert.Contains(t, cfg, `Content-Security-Policy "default-src 'none'`)
+	assert.Contains(t, cfg, `Cache-Control "no-store, no-cache"`)
+	assert.Contains(t, cfg, "etag                off")
+	assert.Contains(t, cfg, "if_modified_since   off")
+	assert.Contains(t, cfg, "expires             off")
+	assert.Contains(t, cfg, "if ($request_method !~ ^(GET|HEAD)$ ) {")
+	assert.Contains(t, cfg, "return 444")
 	assert.Contains(t, cfg, "try_files $uri /locales/en/")
 }
 

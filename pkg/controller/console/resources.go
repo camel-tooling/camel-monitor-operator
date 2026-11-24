@@ -58,12 +58,21 @@ http {
     listen              [::]:%d ssl;
     ssl_certificate     /var/cert/tls.crt;
     ssl_certificate_key /var/cert/tls.key;
+	ssl_protocols       TLSv1.2 TLSv1.3;
     root                /usr/share/nginx/html;
 
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" always;
+	add_header Cache-Control "no-store, no-cache" always;
+	etag                off;
+	if_modified_since   off;
+	expires             off;
+	# Plugin assets are read-only; drop everything else
+    if ($request_method !~ ^(GET|HEAD)$ ) {
+        return 444;
+    }
 
     location ~ ^/locales/(.+)/(.+)$ {
       try_files $uri /locales/en/$2 =404;
