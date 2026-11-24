@@ -174,8 +174,7 @@ spec:
               lastMonitoredTime:
                 description: |-
                   The last time the application was monitored. It is used to schedule the next monitoring cycle,
-                  also after an operator restart (the conditions transition time cannot be used, as it changes only
-                  when the condition status changes).
+                  also after an operator restart.
                 format: date-time
                 type: string
               phase:
