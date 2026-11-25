@@ -66,3 +66,9 @@ Deploy using helm:
 ```sh
 helm upgrade -i camel-monitor-operator helm/camel-monitor --namespace camel-monitor --set operator.image=quay.io/camel-tooling/camel-monitor-operator:latest-amd64
 ```
+
+## Trademark Notice
+
+Apache Camel™ is a trademark of the Apache Software Foundation (ASF).
+
+Camel Monitor is an independent project and is not affiliated with, endorsed by, or sponsored by the Apache Software Foundation. The name Apache Camel is used solely to identify the software with which Camel Monitor is compatible.
