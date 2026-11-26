@@ -309,16 +309,35 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 				<groupId>quarkus</groupId>
 				<artifactId>camel-quarkus</artifactId>
 				<versioning>
-					<latest>3.38.1</latest>
-					<release>3.38.1</release>
+					<latest>4.40.1</latest>
+					<release>4.40.1</release>
 				</versioning>
 			</metadata>
 		`)
 	}))
 	defer server.Close()
+	serverCamelQuarkusBOMEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		fmt.Fprint(w, `
+		<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<dependencyManagement>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.camel.quarkus</groupId>
+						<artifactId>camel-quarkus-core</artifactId>
+						<version>4.40.0</version>
+					</dependency>
+				</dependencies>
+			</dependencyManagement>
+		</project>
+		`)
+	}))
+	defer serverCamelQuarkusBOMEndpoint.Close()
 
 	t.Setenv("CHECK_VERSION_UPGRADE", "true")
 	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", serverCamelQuarkusBOMEndpoint.URL)
+
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Quarkus",
@@ -328,7 +347,7 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 
 	require.Len(t, status.Conditions, 1)
 	assert.Equal(t, metav1.ConditionTrue, status.Conditions[0].Status)
-	assert.Equal(t, "New Camel Quarkus runtime version 3.38.1 is available", status.Conditions[0].Message)
+	assert.Equal(t, "New Camel Quarkus runtime version 4.40.0 is available", status.Conditions[0].Message)
 }
 
 func TestCheckVersionUpgradeSpringBootIsTrue(t *testing.T) {
