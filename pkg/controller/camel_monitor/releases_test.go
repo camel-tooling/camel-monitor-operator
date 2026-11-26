@@ -20,6 +20,7 @@ package monitor
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -46,7 +47,12 @@ func TestGetMavenMetadata(t *testing.T) {
 	}))
 	defer server.Close()
 
-	cached, err := fetchMavenMetadata(context.Background(), server.URL)
+	conf := metadataConf{
+		metadataUrl: server.URL,
+		checkBom:    false,
+	}
+
+	cached, err := fetchMavenMetadata(context.Background(), conf)
 	require.NoError(t, err)
 
 	assert.Equal(t, "org.apache.camel", cached.GroupID)
@@ -54,7 +60,7 @@ func TestGetMavenMetadata(t *testing.T) {
 	assert.Equal(t, "4.14.0", cached.Versioning.Latest)
 	assert.Equal(t, "4.14.0", cached.Versioning.Release)
 
-	target, err := getMavenMetadata(context.Background(), &cached, server.URL)
+	target, err := getMavenMetadata(context.Background(), &cached, conf)
 	require.NoError(t, err)
 
 	assert.Equal(t, cached.Versioning.Latest, target.Versioning.Latest)
@@ -70,9 +76,14 @@ func TestMissingMavenMetadata(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := fetchMavenMetadata(context.Background(), server.URL)
+	conf := metadataConf{
+		metadataUrl: server.URL,
+		checkBom:    false,
+	}
+
+	_, err := fetchMavenMetadata(context.Background(), conf)
 	require.Error(t, err)
-	_, err = getMavenMetadata(context.Background(), nil, server.URL)
+	_, err = getMavenMetadata(context.Background(), nil, conf)
 	require.Error(t, err)
 }
 
@@ -103,7 +114,12 @@ func TestRefreshCacheMavenMetadata(t *testing.T) {
 		},
 	}
 
-	target, err := getMavenMetadata(context.Background(), &cached, server.URL)
+	conf := metadataConf{
+		metadataUrl: server.URL,
+		checkBom:    false,
+	}
+
+	target, err := getMavenMetadata(context.Background(), &cached, conf)
 	require.NoError(t, err)
 
 	assert.Equal(t, "4.14.0", target.Versioning.Latest)
@@ -147,30 +163,48 @@ func TestCamelMainMavenMetadata(t *testing.T) {
 
 func TestCamelQuarkusMavenMetadata(t *testing.T) {
 	cleanCache(t)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	serverQuarkusEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
 		fmt.Fprint(w, `
 			<metadata>
-				<groupId>org.apache.camel.quarkus</groupId>
-				<artifactId>camel-quarkus</artifactId>
+				<groupId>io.quarkus.platform</groupId>
+				<artifactId>quarkus-camel-bom</artifactId>
 				<versioning>
-					<latest>4.14.0</latest>
-					<release>4.14.0</release>
+					<latest>2.40.1</latest>
+					<release>2.40.1</release>
 				</versioning>
 			</metadata>
 		`)
 	}))
-	defer server.Close()
+	defer serverQuarkusEndpoint.Close()
+	serverCamelQuarkusBOMEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		fmt.Fprint(w, `
+		<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+			<dependencyManagement>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.camel.quarkus</groupId>
+						<artifactId>camel-quarkus-core</artifactId>
+						<version>2.40.0</version>
+					</dependency>
+				</dependencies>
+			</dependencyManagement>
+		</project>
+		`)
+	}))
+	defer serverCamelQuarkusBOMEndpoint.Close()
 
-	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", server.URL)
+	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", serverQuarkusEndpoint.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", serverCamelQuarkusBOMEndpoint.URL)
 
 	cached, err := GetCamelQuarkusMetadata(context.Background())
 	require.NoError(t, err)
 
 	assert.Equal(t, "org.apache.camel.quarkus", cached.GroupID)
-	assert.Equal(t, "camel-quarkus", cached.ArtifactID)
-	assert.Equal(t, "4.14.0", cached.Versioning.Latest)
-	assert.Equal(t, "4.14.0", cached.Versioning.Release)
+	assert.Equal(t, "camel-quarkus-core", cached.ArtifactID)
+	assert.Equal(t, "2.40.0", cached.Versioning.Latest)
+	assert.Equal(t, "2.40.0", cached.Versioning.Release)
 
 	target, err := GetCamelQuarkusMetadata(context.Background())
 	require.NoError(t, err)
@@ -246,4 +280,142 @@ func TestCamelQuarkusMavenMetadata404(t *testing.T) {
 
 func TestMetadataURLBuilder(t *testing.T) {
 	assert.Equal(t, "https://repo1.maven.org/maven2/path/to/metadata", buildMetadataURL("path/to/metadata"))
+}
+
+func newXMLServer(t *testing.T, status int, body string) *httptest.Server {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.WriteHeader(status)
+		fmt.Fprint(w, body)
+	}))
+	t.Cleanup(server.Close)
+
+	return server
+}
+
+func TestFetchResponseBodySuccess(t *testing.T) {
+	server := newXMLServer(t, http.StatusOK, "<ok/>")
+
+	body, err := fetchResponseBody(context.Background(), server.URL)
+	require.NoError(t, err)
+	defer body.Close()
+
+	// the body must still be readable by the caller (ownership is transferred to the caller)
+	content, err := io.ReadAll(body)
+	require.NoError(t, err)
+	assert.Equal(t, "<ok/>", string(content))
+}
+
+func TestFetchResponseBodyInvalidURL(t *testing.T) {
+	_, err := fetchResponseBody(context.Background(), "http://[::1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "create Maven metadata request")
+}
+
+func TestFetchResponseBodyUnreachable(t *testing.T) {
+	server := newXMLServer(t, http.StatusOK, "")
+	url := server.URL
+	server.Close()
+
+	_, err := fetchResponseBody(context.Background(), url)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "fetch Maven metadata")
+}
+
+func TestFetchResponseBodyErrorBodyUnreadable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// declare more bytes than we send so the client fails reading the body
+		w.Header().Set("Content-Length", "100")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "partial")
+	}))
+	defer server.Close()
+
+	_, err := fetchResponseBody(context.Background(), server.URL)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected HTTP status 500 Internal Server Error (failed to read response body")
+}
+
+func TestFetchMavenMetadataWithBomErrors(t *testing.T) {
+	const quarkusMetadata = `
+		<metadata>
+			<groupId>io.quarkus.platform</groupId>
+			<artifactId>quarkus-camel-bom</artifactId>
+			<versioning>
+				<latest>2.40.1</latest>
+				<release>2.40.1</release>
+			</versioning>
+		</metadata>`
+
+	tests := []struct {
+		name        string
+		bomStatus   int
+		bomBody     string
+		errContains string
+	}{
+		{
+			name:        "bom fetch fails",
+			bomStatus:   http.StatusNotFound,
+			bomBody:     "not found",
+			errContains: "unexpected HTTP status 404 Not Found",
+		},
+		{
+			name:        "bom is not a valid xml",
+			bomStatus:   http.StatusOK,
+			bomBody:     "",
+			errContains: "EOF",
+		},
+		{
+			name:      "dependency not found in bom",
+			bomStatus: http.StatusOK,
+			bomBody: `
+				<project>
+					<dependencyManagement>
+						<dependencies>
+							<dependency>
+								<groupId>org.apache.camel.quarkus</groupId>
+								<artifactId>camel-quarkus-other</artifactId>
+								<version>2.40.0</version>
+							</dependency>
+						</dependencies>
+					</dependencyManagement>
+				</project>`,
+			errContains: "could not fetch properly BOM from",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metadataServer := newXMLServer(t, http.StatusOK, quarkusMetadata)
+			bomServer := newXMLServer(t, tt.bomStatus, tt.bomBody)
+			t.Setenv("MAVEN_BASE_REPO_URL", bomServer.URL)
+
+			_, err := fetchMavenMetadata(context.Background(), metadataConf{
+				metadataUrl: metadataServer.URL,
+				checkBom:    true,
+				groupId:     "org.apache.camel.quarkus",
+				artifactId:  "camel-quarkus-core",
+			})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errContains)
+		})
+	}
+}
+
+func TestAdaptBomToMavenMetadata(t *testing.T) {
+	b := &bom{Dependencies: []dependency{
+		{GroupID: "org.apache.camel.quarkus", ArtifactID: "camel-quarkus-other", Version: "1.0.0"},
+		{GroupID: "other.group", ArtifactID: "camel-quarkus-core", Version: "2.0.0"},
+		{GroupID: "org.apache.camel.quarkus", ArtifactID: "camel-quarkus-core", Version: "3.0.0"},
+	}}
+
+	found := adaptBomToMavenMetadata("org.apache.camel.quarkus", "camel-quarkus-core", b)
+	require.NotNil(t, found)
+	assert.Equal(t, "3.0.0", found.Versioning.Latest)
+	assert.Equal(t, "3.0.0", found.Versioning.Release)
+
+	assert.Nil(t, adaptBomToMavenMetadata("org.apache.camel.quarkus", "missing", b))
+	assert.Nil(t, adaptBomToMavenMetadata("missing", "camel-quarkus-core", &bom{}))
 }
