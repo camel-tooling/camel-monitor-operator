@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults"
 	"github.com/camel-tooling/camel-monitor-operator/pkg/util/log"
 )
 
@@ -40,6 +41,7 @@ const (
 	GrafanaDatasourceEnvVariable          = "GRAFANA_DS"
 	maxIdleEnvVariable                    = "MAX_IDLE_SEC"
 	checkVersionUpgradeEnvVariable        = "CHECK_VERSION_UPGRADE"
+	mavenBaseRepoUrlEnvVariable           = "MAVEN_BASE_REPO_URL"
 	clientQPSEnvVariable                  = "CLIENT_QPS"
 	clientBurstEnvVariable                = "CLIENT_BURST"
 	maxConcurrentReconcilesEnvVariable    = "MAX_CONCURRENT_RECONCILES"
@@ -298,4 +300,13 @@ func GetCheckVersionUpgrade() string {
 	}
 
 	return ""
+}
+
+// GetMavenBaseRepoUrl returns the base repo for the check version upgrade feature or the default one provided at build time.
+func GetMavenBaseRepoUrl() string {
+	if base, envSet := os.LookupEnv(mavenBaseRepoUrlEnvVariable); envSet {
+		return base
+	}
+
+	return defaults.DefaultMavenBaseRepo
 }
