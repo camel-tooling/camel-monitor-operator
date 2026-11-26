@@ -27,7 +27,7 @@ const (
 	// BuildProvider -- .
 	BuildProvider = "Camel Tooling"
 	// DefaultMavenBaseRepo -- .
-	DefaultMavenBaseRepo = "https://repo1.maven.org/maven2/"
+	DefaultMavenBaseRepo = "https://repo1.maven.org/maven2"
 )
 
 // GitCommit must be provided during application build.

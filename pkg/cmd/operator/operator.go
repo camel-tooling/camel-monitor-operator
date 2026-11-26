@@ -203,7 +203,8 @@ func Run(healthPort, monitoringPort int, leaderElection bool, leaderElectionID s
 	exitOnError(synthetic.ManageSyntheticCamelMonitors(ctx, ctrlClient, mgr.GetCache()), "Camel App Synthetic manager error")
 
 	if platform.GetCheckVersionUpgrade() == "true" {
-		log.Infof("The operator is configured to check any new version released on %s repository", defaults.DefaultMavenBaseRepo)
+		log.Infof("The operator is configured to check any new version released on %s Maven repository",
+			platform.GetMavenBaseRepoUrl())
 	}
 
 	log.Info("Starting the manager")

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/camel-tooling/camel-monitor-operator/pkg/apis/camel/v1alpha1"
+	"github.com/camel-tooling/camel-monitor-operator/pkg/util/defaults"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -222,4 +223,11 @@ func TestGetGrafanaLabels(t *testing.T) {
 	labels := GetGrafanaLabels()
 
 	assert.Equal(t, "camel", labels["team"])
+}
+
+func TestGetMavenBaseRepoUrl(t *testing.T) {
+	assert.Equal(t, defaults.DefaultMavenBaseRepo, GetMavenBaseRepoUrl())
+
+	t.Setenv(mavenBaseRepoUrlEnvVariable, "http://localhost:8080/maven2")
+	assert.Equal(t, "http://localhost:8080/maven2", GetMavenBaseRepoUrl())
 }
