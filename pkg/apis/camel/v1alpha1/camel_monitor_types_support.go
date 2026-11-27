@@ -37,6 +37,9 @@ const (
 	ConditionTypeMemoryPressure = "MemoryPressure"
 	// ConditionTypeCPUPressure reports whether any Pod has CPU pressure.
 	ConditionTypeCPUPressure = "CPUPressure"
+	// ConditionTypePressure is calculated by the operator: it is True when any of the conditions listed in
+	// PressureConditionTypes is True, False otherwise.
+	ConditionTypePressure = "Pressure"
 	// ConditionTypeUpgradeAvailable reports whether a newer runtime version is available.
 	ConditionTypeUpgradeAvailable = "UpgradeAvailable"
 	// ConditionTypeCronJobExecution reports the scheduling information of a CronJob application.
@@ -74,6 +77,15 @@ const (
 	MonitorSLIExchangeWarningPercentageAnnotation = camelPrefix + "/sli-exchange-warning-percentage"
 )
 
+// PressureConditionTypes returns the condition types aggregated into the ConditionTypePressure condition.
+// Any new pressure condition must be added here in order to be reported by the aggregated condition.
+func PressureConditionTypes() []string {
+	return []string{
+		ConditionTypeMemoryPressure,
+		ConditionTypeCPUPressure,
+	}
+}
+
 func NewCamelMonitor(namespace string, name string) CamelMonitor {
 	return CamelMonitor{
 		APIVersion: SchemeGroupVersion.String(),
@@ -98,6 +110,48 @@ func (cmonStatus *CamelMonitorStatus) RemoveCondition(condTypes ...string) {
 	for _, condType := range condTypes {
 		meta.RemoveStatusCondition(&cmonStatus.Conditions, condType)
 	}
+}
+
+// SetPressureCondition sets the aggregated ConditionTypePressure condition from the PressureConditionTypes conditions:
+// it is True when any of them is True, False otherwise. If none of them is present (for instance, when there is no
+// Pod available), the aggregated condition is removed as well in order not to report a stale value.
+func (cmonStatus *CamelMonitorStatus) SetPressureCondition() {
+	found := false
+	underPressure := []string{}
+
+	for _, condType := range PressureConditionTypes() {
+		cond := meta.FindStatusCondition(cmonStatus.Conditions, condType)
+		if cond == nil {
+			continue
+		}
+
+		found = true
+
+		if cond.Status == metav1.ConditionTrue {
+			underPressure = append(underPressure, condType)
+		}
+	}
+
+	if !found {
+		cmonStatus.RemoveCondition(ConditionTypePressure)
+
+		return
+	}
+
+	status := metav1.ConditionFalse
+	message := "No pressure detected"
+
+	if len(underPressure) > 0 {
+		status = metav1.ConditionTrue
+		message = "Pressure detected: " + strings.Join(underPressure, ", ")
+	}
+
+	cmonStatus.AddCondition(metav1.Condition{
+		Type:    ConditionTypePressure,
+		Status:  status,
+		Reason:  "AggregatedPressure",
+		Message: message,
+	})
 }
 
 // ImportCamelAnnotations copies all camel annotations from the deployment to the App.

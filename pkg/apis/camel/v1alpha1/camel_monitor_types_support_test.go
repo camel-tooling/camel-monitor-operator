@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,4 +61,52 @@ func TestRemoveCondition(t *testing.T) {
 	assert.NotNil(t, status.GetCondition(ConditionTypeMetricsAvailable))
 	assert.Nil(t, status.GetCondition(ConditionTypeCPUPressure))
 	assert.Nil(t, status.GetCondition(ConditionTypeMemoryPressure))
+}
+
+func TestSetPressureCondition(t *testing.T) {
+	status := CamelMonitorStatus{}
+
+	// no pressure condition available: no aggregated condition either
+	status.SetPressureCondition()
+	assert.Nil(t, status.GetCondition(ConditionTypePressure))
+
+	// all pressure conditions False
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMemoryPressure, Status: metav1.ConditionFalse})
+	status.AddCondition(metav1.Condition{Type: ConditionTypeCPUPressure, Status: metav1.ConditionFalse})
+	status.SetPressureCondition()
+	pressure := status.GetCondition(ConditionTypePressure)
+	require.NotNil(t, pressure)
+	assert.Equal(t, metav1.ConditionFalse, pressure.Status)
+	assert.Equal(t, "No pressure detected", pressure.Message)
+
+	// any pressure condition True
+	status.AddCondition(metav1.Condition{Type: ConditionTypeCPUPressure, Status: metav1.ConditionTrue})
+	status.SetPressureCondition()
+	pressure = status.GetCondition(ConditionTypePressure)
+	require.NotNil(t, pressure)
+	assert.Equal(t, metav1.ConditionTrue, pressure.Status)
+	assert.Equal(t, "Pressure detected: CPUPressure", pressure.Message)
+
+	// all pressure conditions True
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMemoryPressure, Status: metav1.ConditionTrue})
+	status.SetPressureCondition()
+	pressure = status.GetCondition(ConditionTypePressure)
+	require.NotNil(t, pressure)
+	assert.Equal(t, metav1.ConditionTrue, pressure.Status)
+	assert.Equal(t, "Pressure detected: MemoryPressure, CPUPressure", pressure.Message)
+
+	// pressure conditions removed: the aggregated condition must not report a stale value
+	status.RemoveCondition(PressureConditionTypes()...)
+	status.SetPressureCondition()
+	assert.Nil(t, status.GetCondition(ConditionTypePressure))
+}
+
+func TestSetPressureConditionIgnoresOtherConditions(t *testing.T) {
+	status := CamelMonitorStatus{}
+	status.AddCondition(metav1.Condition{Type: ConditionTypeUpgradeAvailable, Status: metav1.ConditionTrue})
+	status.AddCondition(metav1.Condition{Type: ConditionTypeMemoryPressure, Status: metav1.ConditionFalse})
+
+	status.SetPressureCondition()
+
+	assert.Equal(t, metav1.ConditionFalse, status.GetCondition(ConditionTypePressure).Status)
 }

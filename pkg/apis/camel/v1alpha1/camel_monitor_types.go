@@ -43,9 +43,7 @@ const (
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`,description="The Camel App Pods"
 // +kubebuilder:printcolumn:name="Exchanges",type=string,JSONPath=`.status.runtimeSummary.exchange.total`,description="Total exchanges"
 // +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="Healthy")].status`
-// +kubebuilder:printcolumn:name="Metrics Available",type=string,JSONPath=`.status.conditions[?(@.type=="MetricsAvailable")].status`
-// +kubebuilder:printcolumn:name="Memory Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="MemoryPressure")].status`
-// +kubebuilder:printcolumn:name="CPU Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="CPUPressure")].status`
+// +kubebuilder:printcolumn:name="Pressure",type=string,JSONPath=`.status.conditions[?(@.type=="Pressure")].status`,description="True if any pressure condition is True"
 // +kubebuilder:printcolumn:name="Upgrade available",type=string,JSONPath=`.status.conditions[?(@.type=="UpgradeAvailable")].status`
 // +kubebuilder:printcolumn:name="Exchange SLI",type=string,JSONPath=`.status.sliExchangeSuccessRate.status`,description="The success rate SLI"
 // +kubebuilder:printcolumn:name="Last Exchange",type=date,JSONPath=`.status.runtimeSummary.exchange.lastTimestamp`,description="Last exchange age"

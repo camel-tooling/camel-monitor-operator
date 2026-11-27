@@ -63,14 +63,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Healthy")].status
       name: Healthy
       type: string
-    - jsonPath: .status.conditions[?(@.type=="MetricsAvailable")].status
-      name: Metrics Available
-      type: string
-    - jsonPath: .status.conditions[?(@.type=="MemoryPressure")].status
-      name: Memory Pressure
-      type: string
-    - jsonPath: .status.conditions[?(@.type=="CPUPressure")].status
-      name: CPU Pressure
+    - description: True if any pressure condition is True
+      jsonPath: .status.conditions[?(@.type=="Pressure")].status
+      name: Pressure
       type: string
     - jsonPath: .status.conditions[?(@.type=="UpgradeAvailable")].status
       name: Upgrade available

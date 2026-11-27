@@ -126,6 +126,11 @@ func TestReconcileApp_ConditionTransitionTimeIsKept(t *testing.T) {
 		Status:             metav1.ConditionTrue,
 		LastTransitionTime: oldTime,
 	})
+	app.Status.AddCondition(metav1.Condition{
+		Type:               v1alpha1.ConditionTypePressure,
+		Status:             metav1.ConditionTrue,
+		LastTransitionTime: oldTime,
+	})
 
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-deploy", Namespace: "default"},
@@ -161,6 +166,7 @@ func TestReconcileApp_ConditionTransitionTimeIsKept(t *testing.T) {
 	require.False(t, oldTime.Equal(&healthy.LastTransitionTime))
 	// Not applicable in this cycle: removed
 	require.Nil(t, got.Status.GetCondition(v1alpha1.ConditionTypeMemoryPressure))
+	require.Nil(t, got.Status.GetCondition(v1alpha1.ConditionTypePressure))
 }
 
 func TestReconcileApp_NotFound(t *testing.T) {
