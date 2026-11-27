@@ -589,6 +589,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 		})
 		// These are calculated from the Pods
 		targetApp.Status.RemoveCondition(v1alpha1.ConditionTypeMemoryPressure, v1alpha1.ConditionTypeCPUPressure)
+		targetApp.Status.SetPressureCondition()
 
 		return
 	}
@@ -645,7 +646,7 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 
 	if podCpuPressure(pods) {
 		cpuPressureCondition = metav1.ConditionTrue
-		cpuPressureMessage = "At least one Pod has JVM memory pressure"
+		cpuPressureMessage = "At least one Pod has CPU pressure"
 	}
 
 	targetApp.Status.AddCondition(metav1.Condition{
@@ -654,6 +655,8 @@ func setMonitoringCondition(app, targetApp *v1alpha1.CamelMonitor, pods []v1alph
 		Reason:  "CPUPressure",
 		Message: cpuPressureMessage,
 	})
+
+	targetApp.Status.SetPressureCondition()
 }
 
 func podMemoryPressure(pods []v1alpha1.PodInfo) bool {

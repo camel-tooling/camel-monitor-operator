@@ -56,6 +56,8 @@ func TestSetMonitoringConditionHelperNoPods(t *testing.T) {
 	healthy := target.Status.GetCondition(v1alpha1.ConditionTypeHealthy)
 	require.NotNil(t, healthy)
 	assert.Equal(t, metav1.ConditionUnknown, healthy.Status)
+
+	assert.Nil(t, target.Status.GetCondition(v1alpha1.ConditionTypePressure))
 }
 
 func TestSetMonitoringConditionHelperAllHealthy(t *testing.T) {
@@ -73,6 +75,7 @@ func TestSetMonitoringConditionHelperAllHealthy(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeHealthy).Status)
 	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeMemoryPressure).Status)
 	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypeCPUPressure).Status)
+	assert.Equal(t, metav1.ConditionFalse, target.Status.GetCondition(v1alpha1.ConditionTypePressure).Status)
 }
 
 func TestSetMonitoringConditionHelperMissingReplicasAndPressure(t *testing.T) {
@@ -93,6 +96,8 @@ func TestSetMonitoringConditionHelperMissingReplicasAndPressure(t *testing.T) {
 	assert.Equal(t, "1 out of 3 pods available", target.Status.GetCondition(v1alpha1.ConditionTypeMetricsAvailable).Message)
 	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeMemoryPressure).Status)
 	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypeCPUPressure).Status)
+	assert.Equal(t, "At least one Pod has CPU pressure", target.Status.GetCondition(v1alpha1.ConditionTypeCPUPressure).Message)
+	assert.Equal(t, metav1.ConditionTrue, target.Status.GetCondition(v1alpha1.ConditionTypePressure).Status)
 }
 
 func TestSetMonitoringConditionHelperPodNotReady(t *testing.T) {
