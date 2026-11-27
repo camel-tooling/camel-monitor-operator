@@ -21,8 +21,8 @@ apiVersion: v2
 name: camel-monitor-operator
 description: A Helm chart for installing the Camel Monitor Operator
 type: application
-version: 0.1.1-SNAPSHOT
-appVersion: 0.1.1-SNAPSHOT
+version: 1.1.0-SNAPSHOT
+appVersion: 1.1.0-SNAPSHOT
 # follows https://github.com/opdev/getocprange/blob/main/kubeOpenShiftVersionMap.yaml
 # dependant on kube libraries
 kubeVersion: ">= 1.33"

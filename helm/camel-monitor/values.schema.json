@@ -18,7 +18,11 @@
       "properties": {
         "image": {
           "type": "string",
-          "description": "Container image for the operator"
+          "description": "Container image for the operator, without tag (a full reference with tag or digest is also accepted)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the operator. Defaults to the chart appVersion"
         },
         "global": {
           "type": "boolean",

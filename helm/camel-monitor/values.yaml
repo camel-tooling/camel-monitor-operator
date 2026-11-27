@@ -20,6 +20,9 @@ fullnameOverride: ""
 
 operator:
   image: quay.io/camel-tooling/camel-monitor-operator
+  # Image tag. Defaults to the chart appVersion when empty.
+  # Ignored if operator.image already contains a tag or a digest.
+  tag: ""
   global: true
   resources: {}
   securityContext: {}
