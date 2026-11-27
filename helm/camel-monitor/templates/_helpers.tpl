@@ -64,6 +64,11 @@ released chart deploys the matching operator image instead of "latest".
 {{- if or (contains "@" $image) (contains ":" $lastSegment) -}}
 {{- $image -}}
 {{- else -}}
-{{- printf "%s:%s" $image (.Values.operator.tag | default .Chart.AppVersion | toString) -}}
+{{- $defaultTag := .Chart.AppVersion | toString -}}
+{{- if hasSuffix "-SNAPSHOT" $defaultTag -}}
+{{- /* development versions are not published, nightly builds are pushed as latest */ -}}
+{{- $defaultTag = "latest" -}}
+{{- end -}}
+{{- printf "%s:%s" $image (.Values.operator.tag | default $defaultTag | toString) -}}
 {{- end -}}
 {{- end -}}
