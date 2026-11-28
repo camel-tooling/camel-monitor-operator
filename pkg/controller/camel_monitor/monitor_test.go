@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -258,7 +259,7 @@ func TestCheckVersionUpgradeMainIsTrue(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CHECK_VERSION_UPGRADE", "true")
-	t.Setenv("CAMEL_MAIN_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Main",
@@ -288,7 +289,7 @@ func TestCheckVersionUpgradeMainIsFalse(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CHECK_VERSION_UPGRADE", "true")
-	t.Setenv("CAMEL_MAIN_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Main",
@@ -304,21 +305,9 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 	cleanCache(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprint(w, `
-			<metadata>
-				<groupId>quarkus</groupId>
-				<artifactId>camel-quarkus</artifactId>
-				<versioning>
-					<latest>4.40.1</latest>
-					<release>4.40.1</release>
-				</versioning>
-			</metadata>
-		`)
-	}))
-	defer server.Close()
-	serverCamelQuarkusBOMEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprint(w, `
+
+		if strings.HasSuffix(r.URL.Path, ".pom") {
+			fmt.Fprint(w, `
 		<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 			<dependencyManagement>
 				<dependencies>
@@ -331,12 +320,25 @@ func TestCheckVersionUpgradeQuarkusIsTrue(t *testing.T) {
 			</dependencyManagement>
 		</project>
 		`)
+
+			return
+		}
+
+		fmt.Fprint(w, `
+			<metadata>
+				<groupId>quarkus</groupId>
+				<artifactId>camel-quarkus</artifactId>
+				<versioning>
+					<latest>4.40.1</latest>
+					<release>4.40.1</release>
+				</versioning>
+			</metadata>
+		`)
 	}))
-	defer serverCamelQuarkusBOMEndpoint.Close()
+	defer server.Close()
 
 	t.Setenv("CHECK_VERSION_UPGRADE", "true")
-	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", server.URL)
-	t.Setenv("MAVEN_BASE_REPO_URL", serverCamelQuarkusBOMEndpoint.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
@@ -368,7 +370,7 @@ func TestCheckVersionUpgradeSpringBootIsTrue(t *testing.T) {
 	defer server.Close()
 
 	t.Setenv("CHECK_VERSION_UPGRADE", "true")
-	t.Setenv("CAMEL_SPRING_BOOT_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 	status := &v1alpha1.CamelMonitorStatus{}
 	checkVersionUpgrade(t.Context(), &v1alpha1.RuntimeInfo{
 		RuntimeProvider: "Spring-Boot",
