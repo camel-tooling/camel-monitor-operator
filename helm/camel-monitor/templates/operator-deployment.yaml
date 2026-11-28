@@ -73,7 +73,7 @@ spec:
             {{- with .Values.operator.extraEnv }}
             {{- . | toYaml | nindent 12 }}
             {{- end }}
-          image: {{ .Values.operator.image }}
+          image: {{ include "camel-monitor.operatorImage" . }}
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:

@@ -34,4 +34,9 @@ do
   sed -i -r "s/${k8s_version_label}: .*/${k8s_version_label}: \""${version}"\"/" $f
 done
 
+# Keep the Helm chart aligned: the chart templates default the operator image tag to appVersion
+chart_file=$location/../helm/camel-monitor/Chart.yaml
+sed -i -r "s/^version: .*/version: ${version}/" $chart_file
+sed -i -r "s/^appVersion: .*/appVersion: ${version}/" $chart_file
+
 echo "Camel Monitor operator version set to: $version and image name to: $image_name"

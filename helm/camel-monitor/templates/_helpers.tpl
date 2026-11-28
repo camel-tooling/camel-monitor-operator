@@ -50,3 +50,25 @@ Selector labels
 app.kubernetes.io/name: {{ include "camel-monitor.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+
+{{/*
+Operator container image reference.
+If operator.image already carries a tag or a digest (e.g. "repo/img:1.2.3" or
+"repo/img@sha256:..."), it is used as is, for backward compatibility.
+Otherwise the tag is operator.tag, defaulting to the chart appVersion, so that a
+released chart deploys the matching operator image instead of "latest".
+*/}}
+{{- define "camel-monitor.operatorImage" -}}
+{{- $image := .Values.operator.image -}}
+{{- $lastSegment := last (splitList "/" $image) -}}
+{{- if or (contains "@" $image) (contains ":" $lastSegment) -}}
+{{- $image -}}
+{{- else -}}
+{{- $defaultTag := .Chart.AppVersion | toString -}}
+{{- if hasSuffix "-SNAPSHOT" $defaultTag -}}
+{{- /* development versions are not published, nightly builds are pushed as latest */ -}}
+{{- $defaultTag = "latest" -}}
+{{- end -}}
+{{- printf "%s:%s" $image (.Values.operator.tag | default $defaultTag | toString) -}}
+{{- end -}}
+{{- end -}}
