@@ -76,21 +76,25 @@ var (
 		Timeout: 10 * time.Second,
 	}
 
-	defaultCamelMainMavenMetadata       = "org/apache/camel/camel-core/maven-metadata.xml"
-	defaultCamelQuarkusMavenMetadata    = "io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml"
-	defaultCamelSpringBootMavenMetadata = "org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml"
+	defaultCamelMainMavenCoordinates       = "org.apache.camel:camel-core"
+	defaultCamelQuarkusMavenCoordinates    = "io.quarkus.platform:quarkus-camel-bom"
+	defaultCamelSpringBootMavenCoordinates = "org.apache.camel.springboot:camel-spring-boot-bom"
 )
 
 const (
 	cacheMetadataTTL = 24 * time.Hour
 	maxErrorBodySize = 16 * 1024
+
+	camelMainMavenCoordinatesEnvVariable       = "CAMEL_MAIN_MAVEN_COORDINATES"
+	camelQuarkusMavenCoordinatesEnvVariable    = "CAMEL_QUARKUS_MAVEN_COORDINATES"
+	camelSpringBootMavenCoordinatesEnvVariable = "CAMEL_SPRING_BOOT_MAVEN_COORDINATES"
 )
 
 // GetCamelMainMetadata is in charge to recover the Camel Main maven metadata.
 func GetCamelMainMetadata(ctx context.Context) (MavenMetadata, error) {
-	camelMainMavenMetadataURL := os.Getenv("CAMEL_MAIN_MAVEN_META_URL")
-	if camelMainMavenMetadataURL == "" {
-		camelMainMavenMetadataURL = buildMetadataURL(defaultCamelMainMavenMetadata)
+	camelMainMavenMetadataURL, err := metadataURLFromEnv(camelMainMavenCoordinatesEnvVariable, defaultCamelMainMavenCoordinates)
+	if err != nil {
+		return MavenMetadata{}, err
 	}
 
 	conf := metadataConf{
@@ -112,9 +116,9 @@ func GetCamelMainMetadata(ctx context.Context) (MavenMetadata, error) {
 // 1. to get the quarkus platform version
 // 2. to get the camel quarkus core version used in such a platform.
 func GetCamelQuarkusMetadata(ctx context.Context) (MavenMetadata, error) {
-	camelQuarkusMavenMetadataURL := os.Getenv("CAMEL_QUARKUS_MAVEN_META_URL")
-	if camelQuarkusMavenMetadataURL == "" {
-		camelQuarkusMavenMetadataURL = buildMetadataURL(defaultCamelQuarkusMavenMetadata)
+	camelQuarkusMavenMetadataURL, err := metadataURLFromEnv(camelQuarkusMavenCoordinatesEnvVariable, defaultCamelQuarkusMavenCoordinates)
+	if err != nil {
+		return MavenMetadata{}, err
 	}
 
 	conf := metadataConf{
@@ -136,9 +140,9 @@ func GetCamelQuarkusMetadata(ctx context.Context) (MavenMetadata, error) {
 
 // GetCamelSpringBootMetadata is in charge to recover the Camel Spring Boot metadata.
 func GetCamelSpringBootMetadata(ctx context.Context) (MavenMetadata, error) {
-	camelSpringBootMavenMetadataURL := os.Getenv("CAMEL_SPRING_BOOT_MAVEN_META_URL")
-	if camelSpringBootMavenMetadataURL == "" {
-		camelSpringBootMavenMetadataURL = buildMetadataURL(defaultCamelSpringBootMavenMetadata)
+	camelSpringBootMavenMetadataURL, err := metadataURLFromEnv(camelSpringBootMavenCoordinatesEnvVariable, defaultCamelSpringBootMavenCoordinates)
+	if err != nil {
+		return MavenMetadata{}, err
 	}
 
 	conf := metadataConf{
@@ -158,6 +162,43 @@ func GetCamelSpringBootMetadata(ctx context.Context) (MavenMetadata, error) {
 
 func buildMetadataURL(meta string) string {
 	return platform.GetMavenBaseRepoUrl() + "/" + meta
+}
+
+// metadataURLFromEnv returns the maven-metadata.xml URL of the Maven coordinates set in the given
+// environment variable, or of the default coordinates when the variable is not set.
+func metadataURLFromEnv(envVariable, defaultCoordinates string) (string, error) {
+	coordinates := os.Getenv(envVariable)
+	if coordinates == "" {
+		coordinates = defaultCoordinates
+	}
+
+	path, err := mavenMetadataPath(coordinates)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", envVariable, err)
+	}
+
+	return buildMetadataURL(path), nil
+}
+
+// mavenMetadataPath turns Maven coordinates in the "groupId:artifactId" form into the path of the
+// maven-metadata.xml in a Maven repository,
+// for instance "org.apache.camel:camel-core" into "org/apache/camel/camel-core/maven-metadata.xml".
+func mavenMetadataPath(coordinates string) (string, error) {
+	trimmed := strings.TrimSpace(coordinates)
+	parts := strings.Split(trimmed, ":")
+
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" || strings.ContainsAny(trimmed, "/ ") {
+		return "", fmt.Errorf("invalid Maven coordinates %q, expected groupId:artifactId", coordinates)
+	}
+
+	groupID, artifactID := parts[0], parts[1]
+
+	return mavenGroupPath(groupID) + "/" + artifactID + "/maven-metadata.xml", nil
+}
+
+// mavenGroupPath turns a Maven groupId into its path in a Maven repository (eg, "org.apache.camel" into "org/apache/camel").
+func mavenGroupPath(groupID string) string {
+	return strings.ReplaceAll(groupID, ".", "/")
 }
 
 // getMavenMetadata recover the metadata as expected in maven-metadata.xml file
@@ -324,7 +365,7 @@ func adaptBomToMavenMetadata(groupId, artifactId string, b *bom) *MavenMetadata 
 // return the url of the bom referenced in the metadata,
 // for instance "io/quarkus/platform/quarkus-camel-bom/3.40.1/quarkus-camel-bom-3.40.1.pom".
 func buildBomUrl(meta *MavenMetadata) string {
-	gid := strings.ReplaceAll(meta.GroupID, ".", "/")
+	gid := mavenGroupPath(meta.GroupID)
 	art := meta.ArtifactID + "/" + meta.Versioning.Latest + "/" + meta.ArtifactID + "-" + meta.Versioning.Latest + ".pom"
 
 	return gid + "/" + art

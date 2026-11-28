@@ -129,6 +129,12 @@ func TestRefreshCacheMavenMetadata(t *testing.T) {
 func TestCamelMainMavenMetadata(t *testing.T) {
 	cleanCache(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/org/apache/camel/camel-core/maven-metadata.xml" {
+			http.NotFound(w, r)
+
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/xml")
 		fmt.Fprint(w, `
 			<metadata>
@@ -143,7 +149,7 @@ func TestCamelMainMavenMetadata(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Setenv("CAMEL_MAIN_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 
 	cached, err := GetCamelMainMetadata(context.Background())
 	require.NoError(t, err)
@@ -163,9 +169,12 @@ func TestCamelMainMavenMetadata(t *testing.T) {
 
 func TestCamelQuarkusMavenMetadata(t *testing.T) {
 	cleanCache(t)
-	serverQuarkusEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprint(w, `
+
+		switch r.URL.Path {
+		case "/io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml":
+			fmt.Fprint(w, `
 			<metadata>
 				<groupId>io.quarkus.platform</groupId>
 				<artifactId>quarkus-camel-bom</artifactId>
@@ -175,11 +184,8 @@ func TestCamelQuarkusMavenMetadata(t *testing.T) {
 				</versioning>
 			</metadata>
 		`)
-	}))
-	defer serverQuarkusEndpoint.Close()
-	serverCamelQuarkusBOMEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		fmt.Fprint(w, `
+		case "/io/quarkus/platform/quarkus-camel-bom/2.40.1/quarkus-camel-bom-2.40.1.pom":
+			fmt.Fprint(w, `
 		<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 			<dependencyManagement>
 				<dependencies>
@@ -192,11 +198,13 @@ func TestCamelQuarkusMavenMetadata(t *testing.T) {
 			</dependencyManagement>
 		</project>
 		`)
+		default:
+			http.NotFound(w, r)
+		}
 	}))
-	defer serverCamelQuarkusBOMEndpoint.Close()
+	defer server.Close()
 
-	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", serverQuarkusEndpoint.URL)
-	t.Setenv("MAVEN_BASE_REPO_URL", serverCamelQuarkusBOMEndpoint.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 
 	cached, err := GetCamelQuarkusMetadata(context.Background())
 	require.NoError(t, err)
@@ -217,6 +225,12 @@ func TestCamelQuarkusMavenMetadata(t *testing.T) {
 func TestCamelSpringBootMavenMetadata(t *testing.T) {
 	cleanCache(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/org/apache/camel/springboot/camel-spring-boot-bom/maven-metadata.xml" {
+			http.NotFound(w, r)
+
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/xml")
 		fmt.Fprint(w, `
 			<metadata>
@@ -231,7 +245,7 @@ func TestCamelSpringBootMavenMetadata(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Setenv("CAMEL_SPRING_BOOT_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 
 	cached, err := GetCamelSpringBootMetadata(context.Background())
 	require.NoError(t, err)
@@ -271,7 +285,7 @@ func TestCamelQuarkusMavenMetadata404(t *testing.T) {
 	}))
 	defer server.Close()
 
-	t.Setenv("CAMEL_QUARKUS_MAVEN_META_URL", server.URL)
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
 
 	_, err := GetCamelQuarkusMetadata(context.Background())
 	require.Error(t, err)
@@ -418,4 +432,68 @@ func TestAdaptBomToMavenMetadata(t *testing.T) {
 
 	assert.Nil(t, adaptBomToMavenMetadata("org.apache.camel.quarkus", "missing", b))
 	assert.Nil(t, adaptBomToMavenMetadata("missing", "camel-quarkus-core", &bom{}))
+}
+
+func TestMavenMetadataPath(t *testing.T) {
+	path, err := mavenMetadataPath("org.apache.camel:camel-core")
+	require.NoError(t, err)
+	assert.Equal(t, "org/apache/camel/camel-core/maven-metadata.xml", path)
+
+	path, err = mavenMetadataPath(" io.quarkus.platform:quarkus-camel-bom ")
+	require.NoError(t, err)
+	assert.Equal(t, "io/quarkus/platform/quarkus-camel-bom/maven-metadata.xml", path)
+
+	for _, coordinates := range []string{
+		"",
+		"org.apache.camel",
+		"org.apache.camel:",
+		":camel-core",
+		"org.apache.camel:camel-core:4.14.0",
+		"org/apache/camel:camel-core",
+		"org.apache.camel:camel core",
+	} {
+		_, err := mavenMetadataPath(coordinates)
+		require.Error(t, err, coordinates)
+		assert.Contains(t, err.Error(), "expected groupId:artifactId")
+	}
+}
+
+func TestCamelMainMavenMetadataCustomCoordinates(t *testing.T) {
+	cleanCache(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/com/example/my-camel-core/maven-metadata.xml" {
+			http.NotFound(w, r)
+
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/xml")
+		fmt.Fprint(w, `
+			<metadata>
+				<groupId>com.example</groupId>
+				<artifactId>my-camel-core</artifactId>
+				<versioning>
+					<latest>4.14.0-custom</latest>
+					<release>4.14.0-custom</release>
+				</versioning>
+			</metadata>
+		`)
+	}))
+	defer server.Close()
+
+	t.Setenv("MAVEN_BASE_REPO_URL", server.URL)
+	t.Setenv("CAMEL_MAIN_MAVEN_COORDINATES", "com.example:my-camel-core")
+
+	meta, err := GetCamelMainMetadata(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "4.14.0-custom", meta.Versioning.Release)
+}
+
+func TestCamelMainMavenMetadataInvalidCoordinates(t *testing.T) {
+	cleanCache(t)
+	t.Setenv("CAMEL_MAIN_MAVEN_COORDINATES", "org/apache/camel/camel-core/maven-metadata.xml")
+
+	_, err := GetCamelMainMetadata(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CAMEL_MAIN_MAVEN_COORDINATES: invalid Maven coordinates")
 }
